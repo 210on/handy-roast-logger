@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Roast Minimalist</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1"></script>
+<style>
+    :root {
+        --bg-main: #f8f9fa;
+        --surface: #ffffff;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --accent-green: #2cbd6d;
+        --accent-orange: #e67e22;
+        --accent-red: #e74c3c;
+        --chart-temp: #e74c3c;
+        --chart-ror: #3498db;
+    }
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 16px; background-color: var(--bg-main); color: var(--text-primary); padding-bottom: 120px; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    h1 { font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: -0.02em; color: var(--text-secondary); }
+    
+    /* プロファイル設定（クリーンなオーバーレイモーダル） */
+    #profileToggleBtn { background: transparent; border: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; padding: 8px; display: flex; align-items: center; gap: 4px; }
+    #profileEditor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 10000; backdrop-filter: blur(4px); }
+    .modal-content { background: var(--surface); margin: 40px auto; width: 90%; max-width: 360px; border-radius: 16px; padding: 24px; max-height: 80vh; overflow-y: scroll; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    .modal-content h3 { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; }
+    .modal-content p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; }
+    .prof-row-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .prof-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 8px; }
+    .prof-row span { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); }
+    .prof-input { width: 80px; border: none; background: #edf2f7; padding: 6px 10px; font-size: 0.95rem; text-align: center; border-radius: 8px; font-weight: 600; color: var(--text-primary); }
+    .prof-input:focus { outline: 2px solid var(--text-primary); }
+    #saveProfileBtn { background-color: var(--text-primary); color: white; width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+
+    /* ダッシュボード（グリッド配置・ボーダーレス） */
+    #dashboard { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); padding: 16px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+    .stat-box { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .stat-box:not(:last-child) { border-right: 1px solid #edf2f7; }
+    .stat-label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+    #tempDisplay { color: var(--chart-temp); }
+    #rorDisplay { color: var(--chart-ror); }
+
+    /* グラフエリア（アスペクト比を保ちつつ縦幅確保） */
+    #canvas-container { background: var(--surface); padding: 16px 8px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); height: 42vh; min-height: 300px; position: relative; }
+
+    /* 一体化されたボトムミニマルコントロールパネル */
+    #actionUI { 
+        position: fixed; bottom: 20px; left: 5%; width: 90%; max-width: 400px; z-index: 999; 
+        display: flex; align-items: center; background: rgba(255, 255, 255, 0.95); 
+        padding: 8px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        backdrop-filter: blur(8px); border: 1px solid rgba(0,0,0,0.03);
+    }
+    #mainActionBtn { 
+        border: none; border-radius: 50%; width: 64px; height: 64px; 
+        font-size: 0.85rem; font-weight: 700; color: white; cursor: pointer; 
+        -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease;
+    }
+    #mainActionBtn:active:not(:disabled) { transform: scale(0.92); }
+    #mainActionBtn svg { width: 18px; height: 18px; fill: currentColor; }
+    
+    .btn-start { background: var(--accent-green); }
+    .btn-crack { background: var(--accent-orange); }
+    .btn-stop { background: var(--accent-red); }
+    .btn-done { background: #ce9b9b; cursor: not-allowed !important; }
+
+    #crackInfo { display: flex; justify-content: space-around; flex-grow: 1; padding-left: 8px; }
+    .crack-info-box { display: flex; flex-direction: column; align-items: center; }
+    .crack-info-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 2px; }
+    .crack-info-val { font-size: 1.1rem; color: var(--accent-orange); font-variant-numeric: tabular-nums; font-weight: 700; }
+
+    /* 開発用ログ（デフォルト隠蔽・ミニマル化） */
+    #logToggle { font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; cursor: pointer; margin-top: 8px; opacity: 0.5; }
+    #log { display: none; height: 70px; overflow-y: scroll; margin-top: 8px; padding: 8px; text-align: left; font-size: 0.75rem; color: var(--text-secondary); border-top: 1px dashed #edf2f7; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>ROAST LOG / MINIMAL</h1>
+    <button id="profileToggleBtn">⚙️ Profile</button>
+</header>
+
+<div id="profileEditor">
+    <div class="modal-content">
+        <h3>Target Profile</h3>
+        <p>各分の目標温度を入力（未入力は自動補間）</p>
+        <div class="prof-row-list" id="profileRowList"></div>
+        <button id="saveProfileBtn">Apply Profile</button>
+    </div>
+</div>
+
+<div id="dashboard">
+    <div class="stat-box">
+        <span class="stat-label">TIME</span>
+        <span class="stat-value" id="timerDisplay">00:00</span>
+    </div>
+    <div class="stat-box">
+        <span class="stat-label">TEMP</span>
+        <span class="stat-value" id="tempDisplay">---</span>
+    </div>
+    <div class="stat-box">
+        <span class="stat-label">RoR</span>
+        <span class="stat-value" id="rorDisplay">--.-</span>
+    </div>
+</div>
+
+<div id="canvas-container">
+    <canvas id="roastChart"></canvas>
+</div>
+
+<button id="logToggle">▼ Show Console Log</button>
+<div id="log"></div>
+
+<div id="actionUI">
+    <button id="mainActionBtn" class="btn-start">
+        <svg id="btnIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <span id="btnText">START</span>
+    </button>
+    <div id="crackInfo">
+        <div class="crack-info-box">
+            <span class="crack-info-label">CRACK TIME</span>
+            <span class="crack-info-val" id="crackTimeBottom">--:--</span>
+        </div>
+        <div class="crack-info-box">
+            <span class="crack-info-label">DEVELOP RISE</span>
+            <span class="crack-info-val" id="crackTempRise">--.-</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- プロファイル設定 UI生成 ---
+    const rowList = document.getElementById('profileRowList');
+    for(let i = 0; i <= 15; i++) {
+        const div = document.createElement('div'); div.className = 'prof-row';
+        div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---">`;
+        rowList.appendChild(div);
+    }
+
+    let referenceProfile = []; 
+    document.getElementById('profileToggleBtn').addEventListener('click', () => document.getElementById('profileEditor').style.display = 'block');
+    document.getElementById('profileEditor').addEventListener('click', (e) => { if(e.target.id === 'profileEditor') e.target.style.display = 'none'; });
+
+    document.getElementById('saveProfileBtn').addEventListener('click', () => {
+        let points = [];
+        document.querySelectorAll('.prof-input').forEach(input => {
+            if(input.value !== "") points.push({ sec: parseInt(input.getAttribute('data-min')) * 60, temp: parseFloat(input.value) });
+        });
+        referenceProfile = [];
+        if (points.length >= 2) {
+            points.sort((a,b) => a.sec - b.sec); let maxSec = points[points.length-1].sec;
+            for (let t = 0; t <= maxSec; t += 10) {
+                let p1 = points[0], p2 = points[points.length-1];
+                for(let i = 0; i < points.length - 1; i++) { if (t >= points[i].sec && t <= points[i+1].sec) { p1 = points[i]; p2 = points[i+1]; break; } }
+                if (p1.sec === p2.sec) referenceProfile[t/10] = p1.temp;
+                else { referenceProfile[t/10] = p1.temp + ((t - p1.sec) / (p2.sec - p1.sec)) * (p2.temp - p1.temp); }
+            }
+        }
+        roastChart.data.datasets[0].data = referenceProfile; roastChart.update();
+        document.getElementById('profileEditor').style.display = 'none';
+    });
+
+    // --- コンソールログのトグル機能 ---
+    document.getElementById('logToggle').addEventListener('click', function() {
+        const log = document.getElementById('log');
+        if(log.style.display === 'block') { log.style.display = 'none'; this.innerText = '▼ Show Console Log'; }
+        else { log.style.display = 'block'; this.innerText = '▲ Hide Console Log'; }
+    });
+
+    // --- 状態管理 ---
+    let timerInterval = null; let currentSeconds = 0; const tickInterval = 10;
+    let latestTargetTime = 0; let isRoasting = false; let wakeLock = null;
+    let latestRecordedTemp = null; let crackSeconds = null; let crackTemp = null; let roastPhase = 0; 
+    let labels = []; let rawTemps = []; let temps = []; let rors = [];
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const tempDisplay = document.getElementById('tempDisplay');
+    const rorDisplay = document.getElementById('rorDisplay');
+    const logDiv = document.getElementById('log');
+    const mainActionBtn = document.getElementById('mainActionBtn');
+    const btnIcon = document.getElementById('btnIcon');
+    const btnText = document.getElementById('btnText');
+    const crackTimeBottom = document.getElementById('crackTimeBottom');
+    const crackTempRise = document.getElementById('crackTempRise');
+
+    // --- Chart.js クリーンカスタマイズ ---
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, sans-serif';
+    Chart.defaults.color = '#6c757d';
+    const ctx = document.getElementById('roastChart').getContext('2d');
+    const roastChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Target', data: referenceProfile, borderColor: '#e2e8f0', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0, yAxisID: 'y-temp', tension: 0 },
+                { label: 'Temp', data: temps, borderColor: '#e74c3c', backgroundColor: 'transparent', yAxisID: 'y-temp', tension: 0.1, borderWidth: 2, pointRadius: 2 },
+                { label: 'RoR', data: rors, borderColor: '#3498db', backgroundColor: 'transparent', yAxisID: 'y-ror', tension: 0.4, borderWidth: 1.5, pointRadius: 0, borderDash: [2, 2] }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, annotation: { annotations: {} } },
+            scales: {
+                x: { min: 0, max: 180, grid: { display: false } },
+                'y-temp': { type: 'linear', position: 'left', suggestedMin: 50, suggestedMax: 230, grid: { color: '#f1f5f9' }, border: { display: false } },
+                'y-ror': { type: 'linear', position: 'right', suggestedMin: 0, suggestedMax: 30, grid: { display: false }, border: { display: false } }
+            }
+        }
+    });
+
+    function updateXAxisMax(sec) {
+        let maxSec = 180;
+        if (sec < 120) maxSec = 180;
+        else if (sec < 240) maxSec = 300;
+        else if (sec < 420) maxSec = 480;
+        else if (sec < 630) maxSec = 660;
+        else { maxSec = 660 + (Math.floor((sec - 630) / 30) + 1) * 30; }
+        if (roastChart.options.scales.x.max !== maxSec) { roastChart.options.scales.x.max = maxSec; roastChart.update('none'); }
+    }
+
+    // --- 音声 & Web Speech API ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.08);
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ja-JP'; recognition.continuous = true; recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        const match = transcript.match(/\d+([.点]\d+)?/);
+        if (match && roastPhase > 0 && roastPhase < 3) {
+            const temp = parseFloat(match[0].replace('点', '.'));
+            processNewData(latestTargetTime, temp);
+            addLog(latestTargetTime, `🎙️ ${temp}℃`);
+        }
+    };
+    recognition.onend = () => { if (isRoasting) { try { recognition.start(); } catch (e) {} } };
+
+    function processNewData(targetTimeSec, newTemp) {
+        const index = targetTimeSec / tickInterval;
+        rawTemps[index] = newTemp; temps[index] = newTemp;
+        latestRecordedTemp = newTemp; tempDisplay.innerText = newTemp.toFixed(1);
+        interpolateMissingData(index); calculateRoR(); updateCrackInfo(); roastChart.update();
+    }
+
+    function interpolateMissingData(currentIndex) {
+        let lastValidIndex = -1;
+        for (let i = currentIndex - 1; i >= 0; i--) { if (rawTemps[i] !== undefined && rawTemps[i] !== null) { lastValidIndex = i; break; } }
+        if (lastValidIndex !== -1 && currentIndex - lastValidIndex > 1) {
+            const steps = currentIndex - lastValidIndex;
+            const stepTemp = (rawTemps[currentIndex] - rawTemps[lastValidIndex]) / steps;
+            for (let i = 1; i < steps; i++) { temps[lastValidIndex + i] = rawTemps[lastValidIndex] + (stepTemp * i); }
+        }
+    }
+
+    function calculateRoR() {
+        for (let i = 1; i < temps.length; i++) { if (temps[i] !== undefined && temps[i - 1] !== undefined) { rors[i] = (temps[i] - temps[i - 1]) * (60 / tickInterval); } }
+        rors[0] = 0;
+        const latestValidRoR = rors.slice().reverse().find(r => r !== undefined && r !== null);
+        rorDisplay.innerText = latestValidRoR !== undefined ? latestValidRoR.toFixed(1) : "--.-";
+    }
+
+    function updateCrackInfo() {
+        if (crackSeconds !== null) {
+            crackTimeBottom.innerText = formatTime(currentSeconds - crackSeconds);
+            if (crackTemp !== null && latestRecordedTemp !== null) {
+                const rise = latestRecordedTemp - crackTemp;
+                crackTempRise.innerText = (rise > 0 ? "+" : "") + rise.toFixed(1);
+            }
+        }
+    }
+
+    function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
+
+    function updateClock() {
+        timerDisplay.innerText = formatTime(currentSeconds);
+        updateCrackInfo(); updateXAxisMax(currentSeconds);
+        if (currentSeconds % tickInterval === 0) {
+            latestTargetTime = currentSeconds;
+            if(labels.length === currentSeconds / tickInterval) labels.push(currentSeconds);
+            rawTemps[currentSeconds / tickInterval] = null; temps[currentSeconds / tickInterval] = null; rors[currentSeconds / tickInterval] = null;
+            roastChart.update(); playBeep();
+        }
+        currentSeconds++;
+    }
+
+    function addLog(time, msg) {
+        const div = document.createElement('div');
+        div.innerHTML = `<span>[${formatTime(time)}]</span> ${msg}`;
+        logDiv.appendChild(div); logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function requestWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {} }
+    function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().then(() => wakeLock = null); } }
+
+    mainActionBtn.addEventListener('click', async () => {
+        if (roastPhase === 0) {
+            isRoasting = true; currentSeconds = 0; crackSeconds = null; crackTemp = null; latestRecordedTemp = null;
+            labels.length = 0; rawTemps.length = 0; temps.length = 0; rors.length = 0;
+            logDiv.innerHTML = ''; tempDisplay.innerText = "---"; rorDisplay.innerText = "--.-";
+            crackTimeBottom.innerText = "--:--"; crackTempRise.innerText = "--.-";
+            roastChart.options.scales.x.max = 180; roastChart.options.plugins.annotation.annotations = {};
+            
+            btnText.innerText = "CRACK"; mainActionBtn.className = "btn-crack";
+            btnIcon.innerHTML = `<path d="M12 23c-5.52 0-10-4.48-10-10 0-4.75 5.07-8.12 6.19-8.82.41-.26.95-.12 1.19.31.23.42.14.95-.21 1.28-1.5 1.4-2.17 3.39-2.17 5.23 0 3.87 3.13 7 7 7s7-3.13 7-7c0-2.38-1.39-4.83-3.05-6.14-.42-.33-.5-.94-.19-1.37.31-.43.91-.53 1.35-.23C21.05 4.54 22 7.11 22 10c0 5.52-4.48 10-10 10z"/>`;
+            roastPhase = 1;
+            
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            await requestWakeLock();
+            try { recognition.start(); } catch(e) {}
+            updateClock(); timerInterval = setInterval(updateClock, 1000);
+
+        } else if (roastPhase === 1) {
+            crackSeconds = currentSeconds - 1; crackTemp = latestRecordedTemp || 0;
+            roastChart.options.plugins.annotation.annotations = {
+                crackLine: { type: 'line', xMin: crackSeconds, xMax: crackSeconds, borderColor: 'rgba(230, 126, 34, 0.5)', borderWidth: 2 }
+            };
+            roastChart.update(); updateCrackInfo();
+
+            btnText.innerText = "STOP"; mainActionBtn.className = "btn-stop";
+            btnIcon.innerHTML = `<path d="M6 6h12v12H6z"/>`;
+            roastPhase = 2;
+
+        } else if (roastPhase === 2) {
+            isRoasting = false; clearInterval(timerInterval); recognition.stop(); releaseWakeLock();
+            btnText.innerText = "DONE"; mainActionBtn.className = "btn-done";
+            btnIcon.innerHTML = `<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>`;
+            mainActionBtn.disabled = true; roastPhase = 3;
+        }
+    });
+</script>
+</body>
+</html>
