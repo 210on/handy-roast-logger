@@ -206,6 +206,14 @@
         gap: 12px;
     }
 
+    .weight-post-roast {
+        display: contents;
+    }
+
+    .weight-post-roast[hidden] {
+        display: none;
+    }
+
     .weight-field {
         display: flex;
         flex-direction: column;
@@ -373,6 +381,10 @@
         padding-left: 8px;
     }
 
+    #crackInfo[hidden] {
+        display: none;
+    }
+
     .crack-info-box {
         display: flex;
         flex-direction: column;
@@ -456,17 +468,19 @@
                 <span class="weight-unit">g</span>
             </span>
         </label>
-        <label class="weight-field" for="roastedWeightInput">
-            <span class="weight-label">Roasted Beans</span>
-            <span class="weight-input-wrap">
-                <input id="roastedWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="84.0" disabled>
-                <span class="weight-unit">g</span>
-            </span>
-        </label>
-        <div class="weight-summary">
-            <span class="weight-summary-label">Weight Loss</span>
-            <span class="weight-summary-value" id="weightLossDisplay">--.-%</span>
-            <span class="weight-summary-meta" id="weightLossMeta">焙煎前の投入量を入れ、STOP後に焙煎後重量を入力してください。</span>
+        <div id="postRoastFields" class="weight-post-roast" hidden>
+            <label class="weight-field" for="roastedWeightInput">
+                <span class="weight-label">Roasted Beans</span>
+                <span class="weight-input-wrap">
+                    <input id="roastedWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="84.0" disabled>
+                    <span class="weight-unit">g</span>
+                </span>
+            </label>
+            <div class="weight-summary">
+                <span class="weight-summary-label">Weight Loss</span>
+                <span class="weight-summary-value" id="weightLossDisplay">--.-%</span>
+                <span class="weight-summary-meta" id="weightLossMeta">焙煎前の投入量を入れ、STOP後に焙煎後重量を入力してください。</span>
+            </div>
         </div>
     </div>
 </div>
@@ -483,7 +497,7 @@
         <svg id="btnIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         <span id="btnText">START</span>
     </button>
-    <div id="crackInfo">
+    <div id="crackInfo" hidden>
         <div class="crack-info-box">
             <span class="crack-info-label">CRACK TIME</span>
             <span class="crack-info-val" id="crackTimeBottom">--:--</span>
@@ -497,10 +511,62 @@
 
 <script>
     let referenceProfile = [];
+    const profileCacheVersion = '2026-06-default-v1';
+    const defaultProfileInputs = ['150', '80', '105', '128', '149', '167', '182', '194', '202', '206', '209', '', '', '', '', ''];
+
+    function getProfileInputs() {
+        return Array.from(document.querySelectorAll('.prof-input'));
+    }
+
+    function getProfileInputValues() {
+        return getProfileInputs().map((input) => input.value);
+    }
+
+    function updateProfileRowVisibility() {
+        const inputs = getProfileInputs();
+        inputs.forEach((input, index) => {
+            const row = input.closest('.prof-row');
+            if (!row) {
+                return;
+            }
+            const previousValue = index === 0 ? 'seed' : inputs[index - 1].value.trim();
+            row.hidden = index > 0 && previousValue === '';
+        });
+    }
+
+    function focusNextProfileInput(currentIndex) {
+        const inputs = getProfileInputs();
+        if (currentIndex >= inputs.length - 1) {
+            return;
+        }
+        updateProfileRowVisibility();
+        const nextInput = inputs[currentIndex + 1];
+        const nextRow = nextInput ? nextInput.closest('.prof-row') : null;
+        if (nextInput && nextRow && !nextRow.hidden) {
+            nextInput.focus();
+            nextInput.select();
+        }
+    }
+
+    function attachProfileInputBehavior() {
+        getProfileInputs().forEach((input, index) => {
+            input.addEventListener('input', () => {
+                updateProfileRowVisibility();
+            });
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (input.value.trim() !== '') {
+                        focusNextProfileInput(index);
+                    }
+                }
+            });
+        });
+    }
 
     function calculateAndApplyProfile() {
         const points = [];
-        document.querySelectorAll('.prof-input').forEach((input) => {
+        getProfileInputs().forEach((input) => {
             if (input.value !== "") {
                 points.push({
                     sec: parseInt(input.getAttribute('data-min'), 10) * 60,
@@ -533,6 +599,7 @@
             }
         }
 
+        updateXAxisMax(currentSeconds);
         roastChart.data.datasets[0].data = referenceProfile;
         roastChart.update();
     }
@@ -540,17 +607,26 @@
     window.addEventListener('DOMContentLoaded', () => {
         const rowList = document.getElementById('profileRowList');
         const savedInputs = JSON.parse(localStorage.getItem('roastProfileCache')) || [];
+        const savedVersion = localStorage.getItem('roastProfileCacheVersion');
+        const useSavedInputs = savedVersion === profileCacheVersion && savedInputs.length > 0;
+        const initialInputs = useSavedInputs ? savedInputs : defaultProfileInputs;
 
         for (let i = 0; i <= 15; i++) {
             const div = document.createElement('div');
             div.className = 'prof-row';
-            const savedVal = savedInputs[i] || "";
+            const savedVal = initialInputs[i] || "";
             div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---" value="${savedVal}">`;
             rowList.appendChild(div);
         }
 
-        if (savedInputs.length > 0) {
+        attachProfileInputBehavior();
+        updateProfileRowVisibility();
+        if (initialInputs.some((value) => value !== '')) {
             calculateAndApplyProfile();
+        }
+        if (!useSavedInputs) {
+            localStorage.setItem('roastProfileCache', JSON.stringify(initialInputs));
+            localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
         }
     });
 
@@ -566,8 +642,9 @@
 
     document.getElementById('saveProfileBtn').addEventListener('click', () => {
         calculateAndApplyProfile();
-        const inputsToSave = Array.from(document.querySelectorAll('.prof-input')).map((input) => input.value);
+        const inputsToSave = getProfileInputValues();
         localStorage.setItem('roastProfileCache', JSON.stringify(inputsToSave));
+        localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
         document.getElementById('profileEditor').style.display = 'none';
     });
 
@@ -585,6 +662,7 @@
     let timerInterval = null;
     let currentSeconds = 0;
     const tickInterval = 10;
+    const defaultChartMaxSeconds = 180;
     let latestTargetTime = 0;
     let isRoasting = false;
     let wakeLock = null;
@@ -610,6 +688,8 @@
     const btnText = document.getElementById('btnText');
     const crackTimeBottom = document.getElementById('crackTimeBottom');
     const crackTempRise = document.getElementById('crackTempRise');
+    const crackInfo = document.getElementById('crackInfo');
+    const postRoastFields = document.getElementById('postRoastFields');
     const greenWeightInput = document.getElementById('greenWeightInput');
     const roastedWeightInput = document.getElementById('roastedWeightInput');
     const weightLossDisplay = document.getElementById('weightLossDisplay');
@@ -627,7 +707,7 @@
         data: {
             labels: labels,
             datasets: [
-                { label: 'Target', data: referenceProfile, borderColor: '#e2e8f0', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0, yAxisID: 'y-temp', tension: 0 },
+                { label: 'Target', data: referenceProfile, borderColor: 'rgba(100, 116, 139, 0.85)', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, yAxisID: 'y-temp', tension: 0 },
                 { label: 'Temp', data: temps, borderColor: '#e74c3c', backgroundColor: 'transparent', yAxisID: 'y-temp', tension: 0.1, borderWidth: 2, pointRadius: 2 },
                 { label: 'RoR', data: rors, borderColor: '#3498db', backgroundColor: 'transparent', yAxisID: 'y-ror', tension: 0.4, borderWidth: 1.5, pointRadius: 0, borderDash: [2, 2] }
             ]
@@ -647,7 +727,11 @@
         }
     });
 
-    function updateXAxisMax(sec) {
+    function getReferenceProfileMaxSec() {
+        return referenceProfile.length > 0 ? (referenceProfile.length - 1) * tickInterval : 0;
+    }
+
+    function computeChartMaxSeconds(sec) {
         let maxSec = 180;
         if (sec < 120) {
             maxSec = 180;
@@ -660,6 +744,27 @@
         } else {
             maxSec = 660 + (Math.floor((sec - 630) / 30) + 1) * 30;
         }
+        return maxSec;
+    }
+
+    function syncLabelsToRange(maxSec) {
+        const nextLength = Math.floor(maxSec / tickInterval) + 1;
+        if (labels.length === nextLength && labels[labels.length - 1] === maxSec) {
+            return;
+        }
+        labels.length = 0;
+        for (let t = 0; t <= maxSec; t += tickInterval) {
+            labels.push(t);
+        }
+    }
+
+    function getCurrentChartBaseSeconds() {
+        return Math.max(defaultChartMaxSeconds, getReferenceProfileMaxSec());
+    }
+
+    function updateXAxisMax(sec) {
+        const maxSec = computeChartMaxSeconds(Math.max(sec, getCurrentChartBaseSeconds()));
+        syncLabelsToRange(maxSec);
 
         if (roastChart.options.scales.x.max !== maxSec) {
             roastChart.options.scales.x.max = maxSec;
@@ -793,9 +898,6 @@
 
         if (currentSeconds % tickInterval === 0) {
             latestTargetTime = currentSeconds;
-            if (labels.length === currentSeconds / tickInterval) {
-                labels.push(currentSeconds);
-            }
             rawTemps[currentSeconds / tickInterval] = null;
             temps[currentSeconds / tickInterval] = null;
             rors[currentSeconds / tickInterval] = null;
@@ -871,6 +973,11 @@
         updateWeightLossDisplay();
     }
 
+    function updateConditionalPanels() {
+        crackInfo.hidden = crackSeconds === null;
+        postRoastFields.hidden = roastPhase < 3;
+    }
+
     function setActionButton(label, className, iconPath) {
         btnText.innerText = label;
         mainActionBtn.className = className;
@@ -879,11 +986,12 @@
     }
 
     function resetChartState() {
-        labels.length = 0;
         rawTemps.length = 0;
         temps.length = 0;
         rors.length = 0;
-        roastChart.options.scales.x.max = 180;
+        const baseMaxSec = computeChartMaxSeconds(getCurrentChartBaseSeconds());
+        syncLabelsToRange(baseMaxSec);
+        roastChart.options.scales.x.max = baseMaxSec;
         roastChart.options.plugins.annotation.annotations = {};
         roastChart.update();
     }
@@ -919,6 +1027,7 @@
         resetChartState();
         setActionButton('START', 'btn-start', 'M8 5v14l11-7z');
         updateWeightInputsState();
+        updateConditionalPanels();
     }
 
     function escapeCsvCell(value) {
@@ -949,6 +1058,7 @@
         const roastedWeight = parseWeight(roastedWeightInput);
         const weightLossPercent = updateWeightLossDisplay();
         const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds - 1, 0);
+        const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / tickInterval) + 1);
 
         const rows = [
             ['item', 'value'],
@@ -967,7 +1077,7 @@
             ['time_sec', 'time_label', 'target_temp_c', 'actual_temp_c', 'ror_c_per_min', 'is_crack']
         ];
 
-        for (let i = 0; i < labels.length; i++) {
+        for (let i = 0; i < sampleCount; i++) {
             const second = labels[i];
             rows.push([
                 second,
@@ -1009,13 +1119,16 @@
         rorDisplay.innerText = '--.-';
         crackTimeBottom.innerText = '--:--';
         crackTempRise.innerText = '--.-';
-        roastChart.options.scales.x.max = 180;
+        const baseMaxSec = computeChartMaxSeconds(getCurrentChartBaseSeconds());
+        syncLabelsToRange(baseMaxSec);
+        roastChart.options.scales.x.max = baseMaxSec;
         roastChart.options.plugins.annotation.annotations = {};
         roastChart.update();
 
         setActionButton('CRACK', 'btn-crack', 'M12 23c-5.52 0-10-4.48-10-10 0-4.75 5.07-8.12 6.19-8.82.41-.26.95-.12 1.19.31.23.42.14.95-.21 1.28-1.5 1.4-2.17 3.39-2.17 5.23 0 3.87 3.13 7 7 7s7-3.13 7-7c0-2.38-1.39-4.83-3.05-6.14-.42-.33-.5-.94-.19-1.37.31-.43.91-.53 1.35-.23C21.05 4.54 22 7.11 22 10c0 5.52-4.48 10-10 10z');
         roastPhase = 1;
         updateWeightInputsState();
+        updateConditionalPanels();
 
         const context = getAudioContext();
         if (context && context.state === 'suspended') {
@@ -1054,6 +1167,7 @@
 
         setActionButton('STOP', 'btn-stop', 'M6 6h12v12H6z');
         roastPhase = 2;
+        updateConditionalPanels();
     }
 
     function stopRoast() {
@@ -1071,6 +1185,7 @@
         setActionButton('SAVE', 'btn-save', 'M19 9h-4V3H9v6H5l7 7 7-7zm-14 9v2h14v-2H5z');
         roastPhase = 3;
         updateWeightInputsState();
+        updateConditionalPanels();
         roastedWeightInput.focus();
     }
 
