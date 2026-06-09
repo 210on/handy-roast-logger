@@ -19,73 +19,407 @@
         --chart-temp: #e74c3c;
         --chart-ror: #3498db;
     }
-    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 16px; background-color: var(--bg-main); color: var(--text-primary); padding-bottom: 120px; }
-    
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    h1 { font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: -0.02em; color: var(--text-secondary); }
-    
-    /* プロファイル設定モーダル */
-    #profileToggleBtn { background: transparent; border: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; padding: 8px; display: flex; align-items: center; gap: 4px; }
-    #profileEditor { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 10000; backdrop-filter: blur(4px); }
-    .modal-content { background: var(--surface); margin: 40px auto; width: 90%; max-width: 360px; border-radius: 16px; padding: 24px; max-height: 80vh; overflow-y: scroll; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-    .modal-content h3 { margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; }
-    .modal-content p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; }
-    .prof-row-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
-    .prof-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 8px; }
-    .prof-row span { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); }
-    .prof-input { width: 80px; border: none; background: #edf2f7; padding: 6px 10px; font-size: 0.95rem; text-align: center; border-radius: 8px; font-weight: 600; color: var(--text-primary); }
-    .prof-input:focus { outline: 2px solid var(--text-primary); }
-    #saveProfileBtn { background-color: var(--text-primary); color: white; width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
 
-    /* ダッシュボード */
-    #dashboard { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); padding: 16px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-    .stat-box { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .stat-box:not(:last-child) { border-right: 1px solid #edf2f7; }
-    .stat-label { font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-    .stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
-    #tempDisplay { color: var(--chart-temp); }
-    #rorDisplay { color: var(--chart-ror); }
-
-    /* グラフ */
-    #canvas-container { background: var(--surface); padding: 16px 8px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); height: 42vh; min-height: 300px; position: relative; }
-
-    /* ボトムコントロールパネル */
-    #actionUI { 
-        position: fixed; bottom: 20px; left: 5%; width: 90%; max-width: 400px; z-index: 999; 
-        display: flex; align-items: center; background: rgba(255, 255, 255, 0.95); 
-        padding: 8px; border-radius: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        backdrop-filter: blur(8px); border: 1px solid rgba(0,0,0,0.03);
+    * {
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
     }
-    #mainActionBtn { 
-        border: none; border-radius: 50%; width: 64px; height: 64px; 
-        font-size: 0.8rem; font-weight: 700; color: white; cursor: pointer; 
-        -webkit-tap-highlight-color: transparent; flex-shrink: 0;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 16px;
+        padding-bottom: 120px;
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+    }
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    h1 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.02em;
+        color: var(--text-secondary);
+    }
+
+    #profileToggleBtn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    #profileEditor {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 10000;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: var(--surface);
+        margin: 40px auto;
+        width: 90%;
+        max-width: 360px;
+        border-radius: 16px;
+        padding: 24px;
+        max-height: 80vh;
+        overflow-y: scroll;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-content h3 {
+        margin: 0 0 8px 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .modal-content p {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+    }
+
+    .prof-row-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .prof-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #edf2f7;
+        padding-bottom: 8px;
+    }
+
+    .prof-row span {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+
+    .prof-input {
+        width: 80px;
+        border: none;
+        background: #edf2f7;
+        padding: 6px 10px;
+        font-size: 0.95rem;
+        text-align: center;
+        border-radius: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .prof-input:focus {
+        outline: 2px solid var(--text-primary);
+    }
+
+    #saveProfileBtn {
+        background-color: var(--text-primary);
+        color: white;
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    #dashboard {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        background: var(--surface);
+        padding: 16px;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .stat-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .stat-box:not(:last-child) {
+        border-right: 1px solid #edf2f7;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+    }
+
+    .stat-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.03em;
+    }
+
+    #tempDisplay {
+        color: var(--chart-temp);
+    }
+
+    #rorDisplay {
+        color: var(--chart-ror);
+    }
+
+    #weightPanel {
+        background: var(--surface);
+        padding: 16px;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .weight-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .weight-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .weight-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .weight-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #edf2f7;
+        border-radius: 12px;
+        padding: 0 12px;
+    }
+
+    .weight-input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        padding: 14px 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        min-width: 0;
+    }
+
+    .weight-input:focus {
+        outline: none;
+    }
+
+    .weight-input:disabled {
+        color: #9aa4af;
+    }
+
+    .weight-unit {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+    }
+
+    .weight-summary {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: linear-gradient(135deg, #f4f7fb 0%, #eef4f8 100%);
+        border-radius: 14px;
+        padding: 14px;
+    }
+
+    .weight-summary-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .weight-summary-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .weight-summary-meta {
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+    }
+
+    #weightLossDisplay.is-warning {
+        color: var(--accent-red);
+    }
+
+    #canvas-container {
+        background: var(--surface);
+        padding: 16px 8px;
+        border-radius: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        height: 42vh;
+        min-height: 300px;
+        position: relative;
+    }
+
+    #actionUI {
+        position: fixed;
+        bottom: 20px;
+        left: 5%;
+        width: 90%;
+        max-width: 400px;
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px;
+        border-radius: 50px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(0, 0, 0, 0.03);
+    }
+
+    #mainActionBtn {
+        border: none;
+        border-radius: 50%;
+        width: 64px;
+        height: 64px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: white;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
         transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease;
     }
-    #mainActionBtn:active { transform: scale(0.92); }
-    #mainActionBtn svg { width: 20px; height: 20px; fill: currentColor; }
-    
-    .btn-start { background: var(--accent-green); }
-    .btn-crack { background: var(--accent-orange); }
-    .btn-stop { background: var(--accent-red); }
-    .btn-save { background: var(--accent-save); }
 
-    #crackInfo { display: flex; justify-content: space-around; flex-grow: 1; padding-left: 8px; }
-    .crack-info-box { display: flex; flex-direction: column; align-items: center; }
-    .crack-info-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 2px; }
-    .crack-info-val { font-size: 1.1rem; color: var(--accent-orange); font-variant-numeric: tabular-nums; font-weight: 700; }
+    #mainActionBtn:active {
+        transform: scale(0.92);
+    }
 
-    /* コンソールログ */
-    #logToggle { font-size: 0.75rem; color: var(--text-secondary); background: transparent; border: none; cursor: pointer; margin-top: 8px; opacity: 0.5; }
-    #log { display: none; height: 70px; overflow-y: scroll; margin-top: 8px; padding: 8px; text-align: left; font-size: 0.75rem; color: var(--text-secondary); border-top: 1px dashed #edf2f7; }
+    #mainActionBtn:disabled {
+        cursor: default;
+        opacity: 0.7;
+    }
+
+    #mainActionBtn svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+    }
+
+    .btn-start {
+        background: var(--accent-green);
+    }
+
+    .btn-crack {
+        background: var(--accent-orange);
+    }
+
+    .btn-stop {
+        background: var(--accent-red);
+    }
+
+    .btn-save {
+        background: var(--accent-save);
+    }
+
+    #crackInfo {
+        display: flex;
+        justify-content: space-around;
+        flex-grow: 1;
+        padding-left: 8px;
+    }
+
+    .crack-info-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .crack-info-label {
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+
+    .crack-info-val {
+        font-size: 1.1rem;
+        color: var(--accent-orange);
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+    }
+
+    #logToggle {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        margin-top: 8px;
+        opacity: 0.5;
+    }
+
+    #log {
+        display: none;
+        height: 70px;
+        overflow-y: scroll;
+        margin-top: 8px;
+        padding: 8px;
+        text-align: left;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        border-top: 1px dashed #edf2f7;
+    }
 </style>
 </head>
 <body>
 
 <header>
-    <h1>ROAST LOGEER</h1>
+    <h1>ROAST LOGGER</h1>
     <button id="profileToggleBtn">⚙️ Profile</button>
 </header>
 
@@ -110,6 +444,30 @@
     <div class="stat-box">
         <span class="stat-label">RoR</span>
         <span class="stat-value" id="rorDisplay">--.-</span>
+    </div>
+</div>
+
+<div id="weightPanel">
+    <div class="weight-grid">
+        <label class="weight-field" for="greenWeightInput">
+            <span class="weight-label">Green Beans</span>
+            <span class="weight-input-wrap">
+                <input id="greenWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="100.0">
+                <span class="weight-unit">g</span>
+            </span>
+        </label>
+        <label class="weight-field" for="roastedWeightInput">
+            <span class="weight-label">Roasted Beans</span>
+            <span class="weight-input-wrap">
+                <input id="roastedWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="84.0" disabled>
+                <span class="weight-unit">g</span>
+            </span>
+        </label>
+        <div class="weight-summary">
+            <span class="weight-summary-label">Weight Loss</span>
+            <span class="weight-summary-value" id="weightLossDisplay">--.-%</span>
+            <span class="weight-summary-meta" id="weightLossMeta">焙煎前の投入量を入れ、STOP後に焙煎後重量を入力してください。</span>
+        </div>
     </div>
 </div>
 
@@ -138,64 +496,110 @@
 </div>
 
 <script>
-    let referenceProfile = []; 
+    let referenceProfile = [];
 
-    // --- プロファイル計算と描画ロジック ---
     function calculateAndApplyProfile() {
-        let points = [];
-        document.querySelectorAll('.prof-input').forEach(input => {
-            if(input.value !== "") points.push({ sec: parseInt(input.getAttribute('data-min')) * 60, temp: parseFloat(input.value) });
+        const points = [];
+        document.querySelectorAll('.prof-input').forEach((input) => {
+            if (input.value !== "") {
+                points.push({
+                    sec: parseInt(input.getAttribute('data-min'), 10) * 60,
+                    temp: parseFloat(input.value)
+                });
+            }
         });
+
         referenceProfile = [];
         if (points.length >= 2) {
-            points.sort((a,b) => a.sec - b.sec); let maxSec = points[points.length-1].sec;
+            points.sort((a, b) => a.sec - b.sec);
+            const maxSec = points[points.length - 1].sec;
+
             for (let t = 0; t <= maxSec; t += 10) {
-                let p1 = points[0], p2 = points[points.length-1];
-                for(let i = 0; i < points.length - 1; i++) { if (t >= points[i].sec && t <= points[i+1].sec) { p1 = points[i]; p2 = points[i+1]; break; } }
-                if (p1.sec === p2.sec) referenceProfile[t/10] = p1.temp;
-                else { referenceProfile[t/10] = p1.temp + ((t - p1.sec) / (p2.sec - p1.sec)) * (p2.temp - p1.temp); }
+                let p1 = points[0];
+                let p2 = points[points.length - 1];
+                for (let i = 0; i < points.length - 1; i++) {
+                    if (t >= points[i].sec && t <= points[i + 1].sec) {
+                        p1 = points[i];
+                        p2 = points[i + 1];
+                        break;
+                    }
+                }
+
+                if (p1.sec === p2.sec) {
+                    referenceProfile[t / 10] = p1.temp;
+                } else {
+                    referenceProfile[t / 10] = p1.temp + ((t - p1.sec) / (p2.sec - p1.sec)) * (p2.temp - p1.temp);
+                }
             }
         }
-        roastChart.data.datasets[0].data = referenceProfile; 
+
+        roastChart.data.datasets[0].data = referenceProfile;
         roastChart.update();
     }
 
-    // --- 初期ロード時のキャッシュ読み込み ---
     window.addEventListener('DOMContentLoaded', () => {
         const rowList = document.getElementById('profileRowList');
         const savedInputs = JSON.parse(localStorage.getItem('roastProfileCache')) || [];
-        
-        for(let i = 0; i <= 15; i++) {
-            const div = document.createElement('div'); div.className = 'prof-row';
+
+        for (let i = 0; i <= 15; i++) {
+            const div = document.createElement('div');
+            div.className = 'prof-row';
             const savedVal = savedInputs[i] || "";
             div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---" value="${savedVal}">`;
             rowList.appendChild(div);
         }
-        if(savedInputs.length > 0) calculateAndApplyProfile();
+
+        if (savedInputs.length > 0) {
+            calculateAndApplyProfile();
+        }
     });
 
-    document.getElementById('profileToggleBtn').addEventListener('click', () => document.getElementById('profileEditor').style.display = 'block');
-    document.getElementById('profileEditor').addEventListener('click', (e) => { if(e.target.id === 'profileEditor') e.target.style.display = 'none'; });
+    document.getElementById('profileToggleBtn').addEventListener('click', () => {
+        document.getElementById('profileEditor').style.display = 'block';
+    });
 
-    // プロファイル適用とキャッシュ保存
+    document.getElementById('profileEditor').addEventListener('click', (event) => {
+        if (event.target.id === 'profileEditor') {
+            event.target.style.display = 'none';
+        }
+    });
+
     document.getElementById('saveProfileBtn').addEventListener('click', () => {
         calculateAndApplyProfile();
-        const inputsToSave = Array.from(document.querySelectorAll('.prof-input')).map(i => i.value);
+        const inputsToSave = Array.from(document.querySelectorAll('.prof-input')).map((input) => input.value);
         localStorage.setItem('roastProfileCache', JSON.stringify(inputsToSave));
         document.getElementById('profileEditor').style.display = 'none';
     });
 
-    document.getElementById('logToggle').addEventListener('click', function() {
+    document.getElementById('logToggle').addEventListener('click', function () {
         const log = document.getElementById('log');
-        if(log.style.display === 'block') { log.style.display = 'none'; this.innerText = '▼ Show Console Log'; }
-        else { log.style.display = 'block'; this.innerText = '▲ Hide Console Log'; }
+        if (log.style.display === 'block') {
+            log.style.display = 'none';
+            this.innerText = '▼ Show Console Log';
+        } else {
+            log.style.display = 'block';
+            this.innerText = '▲ Hide Console Log';
+        }
     });
 
-    // --- 状態管理 ---
-    let timerInterval = null; let currentSeconds = 0; const tickInterval = 10;
-    let latestTargetTime = 0; let isRoasting = false; let wakeLock = null;
-    let latestRecordedTemp = null; let crackSeconds = null; let crackTemp = null; let roastPhase = 0; 
-    let labels = []; let rawTemps = []; let temps = []; let rors = [];
+    let timerInterval = null;
+    let currentSeconds = 0;
+    const tickInterval = 10;
+    let latestTargetTime = 0;
+    let isRoasting = false;
+    let wakeLock = null;
+    let latestRecordedTemp = null;
+    let crackSeconds = null;
+    let crackTemp = null;
+    let roastPhase = 0;
+    let roastStartedAt = null;
+    let roastStoppedAt = null;
+    let roastStopSeconds = null;
+    let audioCtx = null;
+    const labels = [];
+    const rawTemps = [];
+    const temps = [];
+    const rors = [];
 
     const timerDisplay = document.getElementById('timerDisplay');
     const tempDisplay = document.getElementById('tempDisplay');
@@ -206,10 +610,17 @@
     const btnText = document.getElementById('btnText');
     const crackTimeBottom = document.getElementById('crackTimeBottom');
     const crackTempRise = document.getElementById('crackTempRise');
+    const greenWeightInput = document.getElementById('greenWeightInput');
+    const roastedWeightInput = document.getElementById('roastedWeightInput');
+    const weightLossDisplay = document.getElementById('weightLossDisplay');
+    const weightLossMeta = document.getElementById('weightLossMeta');
 
-    // --- Chart.js ---
+    if (window['chartjs-plugin-annotation']) {
+        Chart.register(window['chartjs-plugin-annotation']);
+    }
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, sans-serif';
     Chart.defaults.color = '#6c757d';
+
     const ctx = document.getElementById('roastChart').getContext('2d');
     const roastChart = new Chart(ctx, {
         type: 'line',
@@ -222,8 +633,12 @@
             ]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false }, annotation: { annotations: {} } },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                annotation: { annotations: {} }
+            },
             scales: {
                 x: { min: 0, max: 180, grid: { display: false } },
                 'y-temp': { type: 'linear', position: 'left', suggestedMin: 50, suggestedMax: 230, grid: { color: '#f1f5f9' }, border: { display: false } },
@@ -234,15 +649,452 @@
 
     function updateXAxisMax(sec) {
         let maxSec = 180;
-        if (sec < 120) maxSec = 180;
-        else if (sec < 240) maxSec = 300;
-        else if (sec < 420) maxSec = 480;
-        else if (sec < 630) maxSec = 660;
-        else { maxSec = 660 + (Math.floor((sec - 630) / 30) + 1) * 30; }
-        if (roastChart.options.scales.x.max !== maxSec) { roastChart.options.scales.x.max = maxSec; roastChart.update('none'); }
+        if (sec < 120) {
+            maxSec = 180;
+        } else if (sec < 240) {
+            maxSec = 300;
+        } else if (sec < 420) {
+            maxSec = 480;
+        } else if (sec < 630) {
+            maxSec = 660;
+        } else {
+            maxSec = 660 + (Math.floor((sec - 630) / 30) + 1) * 30;
+        }
+
+        if (roastChart.options.scales.x.max !== maxSec) {
+            roastChart.options.scales.x.max = maxSec;
+            roastChart.update('none');
+        }
     }
 
-    // --- 音声関連 ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function getAudioContext() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+            return null;
+        }
+        if (!audioCtx) {
+            audioCtx = new AudioContextClass();
+        }
+        return audioCtx;
+    }
+
     function playBeep() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const context = getAudioContext();
+        if (!context) {
+            return;
+        }
+        if (context.state === 'suspended') {
+            context.resume();
+        }
+        const osc = context.createOscillator();
+        const gain = context.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, context.currentTime);
+        gain.gain.setValueAtTime(0.05, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, context.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(context.destination);
+        osc.start();
+        osc.stop(context.currentTime + 0.08);
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+    if (recognition) {
+        recognition.lang = 'ja-JP';
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            const match = transcript.match(/\d+([.点]\d+)?/);
+            if (match && roastPhase > 0 && roastPhase < 3) {
+                const temp = parseFloat(match[0].replace('点', '.'));
+                processNewData(latestTargetTime, temp);
+                addLog(latestTargetTime, `🎙️ ${temp}℃`);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            addLog(Math.max(currentSeconds - 1, 0), `⚠️ 音声認識: ${event.error}`);
+        };
+
+        recognition.onend = () => {
+            if (isRoasting) {
+                try {
+                    recognition.start();
+                } catch (error) {
+                    addLog(Math.max(currentSeconds - 1, 0), '⚠️ 音声認識の再開に失敗しました');
+                }
+            }
+        };
+    }
+
+    function processNewData(targetTimeSec, newTemp) {
+        const index = targetTimeSec / tickInterval;
+        rawTemps[index] = newTemp;
+        temps[index] = newTemp;
+        latestRecordedTemp = newTemp;
+        tempDisplay.innerText = newTemp.toFixed(1);
+        interpolateMissingData(index);
+        calculateRoR();
+        updateCrackInfo();
+        roastChart.update();
+    }
+
+    function interpolateMissingData(currentIndex) {
+        let lastValidIndex = -1;
+        for (let i = currentIndex - 1; i >= 0; i--) {
+            if (rawTemps[i] !== undefined && rawTemps[i] !== null) {
+                lastValidIndex = i;
+                break;
+            }
+        }
+        if (lastValidIndex !== -1 && currentIndex - lastValidIndex > 1) {
+            const steps = currentIndex - lastValidIndex;
+            const stepTemp = (rawTemps[currentIndex] - rawTemps[lastValidIndex]) / steps;
+            for (let i = 1; i < steps; i++) {
+                temps[lastValidIndex + i] = rawTemps[lastValidIndex] + (stepTemp * i);
+            }
+        }
+    }
+
+    function calculateRoR() {
+        for (let i = 1; i < temps.length; i++) {
+            if (temps[i] !== undefined && temps[i] !== null && temps[i - 1] !== undefined && temps[i - 1] !== null) {
+                rors[i] = (temps[i] - temps[i - 1]) * (60 / tickInterval);
+            }
+        }
+        rors[0] = 0;
+        const latestValidRoR = rors.slice().reverse().find((value) => value !== undefined && value !== null);
+        rorDisplay.innerText = latestValidRoR !== undefined ? latestValidRoR.toFixed(1) : '--.-';
+    }
+
+    function updateCrackInfo() {
+        if (crackSeconds !== null) {
+            const elapsed = Math.max((roastStopSeconds ?? currentSeconds) - crackSeconds, 0);
+            crackTimeBottom.innerText = formatTime(elapsed);
+            if (crackTemp !== null && latestRecordedTemp !== null) {
+                const rise = latestRecordedTemp - crackTemp;
+                crackTempRise.innerText = `${rise > 0 ? '+' : ''}${rise.toFixed(1)}`;
+            }
+        }
+    }
+
+    function formatTime(seconds) {
+        const safeSeconds = Math.max(0, Math.round(seconds));
+        return `${Math.floor(safeSeconds / 60).toString().padStart(2, '0')}:${(safeSeconds % 60).toString().padStart(2, '0')}`;
+    }
+
+    function updateClock() {
+        timerDisplay.innerText = formatTime(currentSeconds);
+        updateCrackInfo();
+        updateXAxisMax(currentSeconds);
+
+        if (currentSeconds % tickInterval === 0) {
+            latestTargetTime = currentSeconds;
+            if (labels.length === currentSeconds / tickInterval) {
+                labels.push(currentSeconds);
+            }
+            rawTemps[currentSeconds / tickInterval] = null;
+            temps[currentSeconds / tickInterval] = null;
+            rors[currentSeconds / tickInterval] = null;
+            roastChart.update();
+            playBeep();
+        }
+        currentSeconds++;
+    }
+
+    function addLog(time, msg) {
+        const div = document.createElement('div');
+        div.innerHTML = `<span>[${formatTime(time)}]</span> ${msg}`;
+        logDiv.appendChild(div);
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (error) {
+            addLog(0, '⚠️ Wake Lockを取得できませんでした');
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => {
+                wakeLock = null;
+            });
+        }
+    }
+
+    function parseWeight(input) {
+        const value = parseFloat(input.value);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    function updateWeightLossDisplay() {
+        const greenWeight = parseWeight(greenWeightInput);
+        const roastedWeight = parseWeight(roastedWeightInput);
+
+        weightLossDisplay.classList.remove('is-warning');
+
+        if (greenWeight === null || greenWeight <= 0 || roastedWeight === null || roastedWeight < 0) {
+            weightLossDisplay.innerText = '--.-%';
+            if (roastPhase < 3) {
+                weightLossMeta.innerText = '焙煎前の投入量を入れ、STOP後に焙煎後重量を入力してください。';
+            } else {
+                weightLossMeta.innerText = '焙煎後重量を入力すると重量減少率を自動計算します。';
+            }
+            return null;
+        }
+
+        const lossGrams = greenWeight - roastedWeight;
+        const lossPercent = (lossGrams / greenWeight) * 100;
+        weightLossDisplay.innerText = `${lossPercent.toFixed(1)}%`;
+
+        if (lossGrams < 0) {
+            weightLossDisplay.classList.add('is-warning');
+            weightLossMeta.innerText = `焙煎後の方が ${Math.abs(lossGrams).toFixed(1)}g 重くなっています。`;
+        } else {
+            weightLossMeta.innerText = `${lossGrams.toFixed(1)}g 減少`;
+        }
+
+        return lossPercent;
+    }
+
+    function updateWeightInputsState() {
+        greenWeightInput.disabled = roastPhase !== 0;
+        roastedWeightInput.disabled = roastPhase !== 3;
+        updateWeightLossDisplay();
+    }
+
+    function setActionButton(label, className, iconPath) {
+        btnText.innerText = label;
+        mainActionBtn.className = className;
+        btnIcon.innerHTML = `<path d="${iconPath}"/>`;
+        mainActionBtn.disabled = false;
+    }
+
+    function resetChartState() {
+        labels.length = 0;
+        rawTemps.length = 0;
+        temps.length = 0;
+        rors.length = 0;
+        roastChart.options.scales.x.max = 180;
+        roastChart.options.plugins.annotation.annotations = {};
+        roastChart.update();
+    }
+
+    function resetUI(clearWeights) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        isRoasting = false;
+        latestTargetTime = 0;
+        currentSeconds = 0;
+        latestRecordedTemp = null;
+        crackSeconds = null;
+        crackTemp = null;
+        roastStartedAt = null;
+        roastStoppedAt = null;
+        roastStopSeconds = null;
+        roastPhase = 0;
+
+        timerDisplay.innerText = '00:00';
+        tempDisplay.innerText = '---';
+        rorDisplay.innerText = '--.-';
+        crackTimeBottom.innerText = '--:--';
+        crackTempRise.innerText = '--.-';
+        logDiv.innerHTML = '';
+
+        if (clearWeights) {
+            greenWeightInput.value = '';
+            roastedWeightInput.value = '';
+        } else {
+            roastedWeightInput.value = '';
+        }
+
+        resetChartState();
+        setActionButton('START', 'btn-start', 'M8 5v14l11-7z');
+        updateWeightInputsState();
+    }
+
+    function escapeCsvCell(value) {
+        const stringValue = value === null || value === undefined ? '' : String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+            return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+    }
+
+    function formatNumber(value) {
+        return value === null || value === undefined || Number.isNaN(value) ? '' : value.toFixed(1);
+    }
+
+    function buildTimestampForFilename(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+    }
+
+    function exportCSV() {
+        const exportedAt = new Date();
+        const greenWeight = parseWeight(greenWeightInput);
+        const roastedWeight = parseWeight(roastedWeightInput);
+        const weightLossPercent = updateWeightLossDisplay();
+        const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds - 1, 0);
+
+        const rows = [
+            ['item', 'value'],
+            ['exported_at', exportedAt.toISOString()],
+            ['roast_started_at', roastStartedAt ? roastStartedAt.toISOString() : ''],
+            ['roast_stopped_at', roastStoppedAt ? roastStoppedAt.toISOString() : ''],
+            ['roast_duration_sec', durationSeconds],
+            ['roast_duration', formatTime(durationSeconds)],
+            ['crack_time_sec', crackSeconds !== null ? crackSeconds : ''],
+            ['crack_time', crackSeconds !== null ? formatTime(crackSeconds) : ''],
+            ['crack_temp_c', crackTemp !== null ? formatNumber(crackTemp) : ''],
+            ['green_weight_g', greenWeight !== null ? formatNumber(greenWeight) : ''],
+            ['roasted_weight_g', roastedWeight !== null ? formatNumber(roastedWeight) : ''],
+            ['weight_loss_percent', weightLossPercent !== null ? weightLossPercent.toFixed(1) : ''],
+            [],
+            ['time_sec', 'time_label', 'target_temp_c', 'actual_temp_c', 'ror_c_per_min', 'is_crack']
+        ];
+
+        for (let i = 0; i < labels.length; i++) {
+            const second = labels[i];
+            rows.push([
+                second,
+                formatTime(second),
+                referenceProfile[i] !== undefined ? formatNumber(referenceProfile[i]) : '',
+                temps[i] !== undefined && temps[i] !== null ? formatNumber(temps[i]) : '',
+                rors[i] !== undefined && rors[i] !== null ? formatNumber(rors[i]) : '',
+                crackSeconds !== null && second === crackSeconds ? '1' : ''
+            ]);
+        }
+
+        const csv = `\uFEFF${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n')}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `roast_log_${buildTimestampForFilename(exportedAt)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function startRoast() {
+        isRoasting = true;
+        currentSeconds = 0;
+        crackSeconds = null;
+        crackTemp = null;
+        latestRecordedTemp = null;
+        roastStartedAt = new Date();
+        roastStoppedAt = null;
+        roastStopSeconds = null;
+
+        labels.length = 0;
+        rawTemps.length = 0;
+        temps.length = 0;
+        rors.length = 0;
+
+        logDiv.innerHTML = '';
+        tempDisplay.innerText = '---';
+        rorDisplay.innerText = '--.-';
+        crackTimeBottom.innerText = '--:--';
+        crackTempRise.innerText = '--.-';
+        roastChart.options.scales.x.max = 180;
+        roastChart.options.plugins.annotation.annotations = {};
+        roastChart.update();
+
+        setActionButton('CRACK', 'btn-crack', 'M12 23c-5.52 0-10-4.48-10-10 0-4.75 5.07-8.12 6.19-8.82.41-.26.95-.12 1.19.31.23.42.14.95-.21 1.28-1.5 1.4-2.17 3.39-2.17 5.23 0 3.87 3.13 7 7 7s7-3.13 7-7c0-2.38-1.39-4.83-3.05-6.14-.42-.33-.5-.94-.19-1.37.31-.43.91-.53 1.35-.23C21.05 4.54 22 7.11 22 10c0 5.52-4.48 10-10 10z');
+        roastPhase = 1;
+        updateWeightInputsState();
+
+        const context = getAudioContext();
+        if (context && context.state === 'suspended') {
+            await context.resume();
+        }
+
+        await requestWakeLock();
+        if (recognition) {
+            try {
+                recognition.start();
+            } catch (error) {
+                addLog(0, '⚠️ 音声認識を開始できませんでした');
+            }
+        } else {
+            addLog(0, '⚠️ このブラウザでは音声認識が使えません');
+        }
+
+        updateClock();
+        timerInterval = setInterval(updateClock, 1000);
+    }
+
+    function markCrack() {
+        crackSeconds = Math.max(currentSeconds - 1, 0);
+        crackTemp = latestRecordedTemp || 0;
+        roastChart.options.plugins.annotation.annotations = {
+            crackLine: {
+                type: 'line',
+                xMin: crackSeconds,
+                xMax: crackSeconds,
+                borderColor: 'rgba(230, 126, 34, 0.5)',
+                borderWidth: 2
+            }
+        };
+        roastChart.update();
+        updateCrackInfo();
+
+        setActionButton('STOP', 'btn-stop', 'M6 6h12v12H6z');
+        roastPhase = 2;
+    }
+
+    function stopRoast() {
+        isRoasting = false;
+        clearInterval(timerInterval);
+        timerInterval = null;
+        roastStoppedAt = new Date();
+        roastStopSeconds = Math.max(currentSeconds - 1, 0);
+        if (recognition) {
+            recognition.stop();
+        }
+        releaseWakeLock();
+        updateCrackInfo();
+
+        setActionButton('SAVE', 'btn-save', 'M19 9h-4V3H9v6H5l7 7 7-7zm-14 9v2h14v-2H5z');
+        roastPhase = 3;
+        updateWeightInputsState();
+        roastedWeightInput.focus();
+    }
+
+    function saveRoast() {
+        exportCSV();
+        resetUI(true);
+    }
+
+    greenWeightInput.addEventListener('input', updateWeightLossDisplay);
+    roastedWeightInput.addEventListener('input', updateWeightLossDisplay);
+
+    mainActionBtn.addEventListener('click', async () => {
+        if (roastPhase === 0) {
+            await startRoast();
+        } else if (roastPhase === 1) {
+            markCrack();
+        } else if (roastPhase === 2) {
+            stopRoast();
+        } else if (roastPhase === 3) {
+            saveRoast();
+        }
+    });
+
+    resetUI(false);
+</script>
+</body>
+</html>
