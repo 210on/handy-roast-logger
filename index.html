@@ -133,8 +133,6 @@
         display: none;
     }
 
-    .profile-controls,
-    .profile-actions,
     .settings-list {
         display: flex;
         flex-direction: column;
@@ -142,9 +140,103 @@
         margin-bottom: 18px;
     }
 
-    .profile-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .profile-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+
+    .profile-row {
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #edf2f7;
+    }
+
+    .profile-row-body {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 6px 10px;
+        background: #edf2f7;
+        position: relative;
+        z-index: 1;
+        transform: translateX(0);
+        transition: transform 0.18s ease, background 0.18s ease;
+        touch-action: pan-y;
+    }
+
+    .profile-row.is-active .profile-row-body {
+        background: #dbeafe;
+    }
+
+    .profile-row.is-delete-open .profile-row-body {
+        transform: translateX(-58px);
+    }
+
+    .profile-name {
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-size: 0.94rem;
+        font-weight: 700;
+        min-width: 0;
+        padding: 8px 2px;
+    }
+
+    .profile-name:focus {
+        outline: none;
+    }
+
+    .profile-row.is-active .profile-name {
+        color: #0f172a;
+    }
+
+    .profile-delete-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 58px;
+        height: 100%;
+        border: none;
+        background: var(--accent-red);
+        color: white;
+        font-size: 1.15rem;
+        font-weight: 800;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+        transition: opacity 0.18s ease;
+    }
+
+    .profile-row.is-delete-open .profile-delete-btn {
+        opacity: 1 !important;
+        pointer-events: auto;
+        visibility: visible;
+    }
+
+    .profile-create-btn {
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 0.86rem;
+        font-weight: 700;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .profile-hint {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        line-height: 1.35;
+        margin: -8px 0 18px 0;
     }
 
     .settings-field {
@@ -612,22 +704,8 @@
 
         <section id="profilePanel" class="settings-panel" role="tabpanel" aria-labelledby="profileTabBtn">
             <p>各分の目標温度を入力（未入力は自動補間）</p>
-            <div class="profile-controls">
-                <label class="settings-field" for="profileSelect">
-                    <span class="settings-label">Saved Profile</span>
-                    <select id="profileSelect" class="settings-select" aria-label="Saved target profiles"></select>
-                </label>
-                <label class="settings-field" for="profileNameInput">
-                    <span class="settings-label">Profile Name</span>
-                    <input id="profileNameInput" class="settings-input" type="text" autocomplete="off" placeholder="Default">
-                </label>
-            </div>
-            <div class="profile-actions">
-                <button id="newProfileBtn" class="secondary-btn" type="button" aria-label="Create new profile">New</button>
-                <button id="duplicateProfileBtn" class="secondary-btn" type="button" aria-label="Duplicate current profile">Copy</button>
-                <button id="clearProfileBtn" class="secondary-btn" type="button" aria-label="Clear profile fields">Clear Fields</button>
-                <button id="deleteProfileBtn" class="danger-btn" type="button" aria-label="Delete selected profile">Delete</button>
-            </div>
+            <div class="profile-list" id="profileList" aria-label="Profiles"></div>
+            <span class="profile-hint">名前はそのまま編集。左スワイプで削除、長押しで複製。</span>
             <div class="prof-row-list" id="profileRowList"></div>
             <button id="saveProfileBtn" type="button" aria-label="Apply and save target profile">Apply Profile</button>
         </section>
@@ -727,9 +805,9 @@
     const profileLibraryVersionKey = 'roastProfileLibraryVersion';
     const activeProfileKey = 'activeRoastProfileId';
     const defaultProfileInputs = ['150', '80', '105', '128', '149', '167', '182', '194', '202', '206', '209', '', '', '', '', ''];
+    const maxProfileMinute = 15;
     let profileLibrary = [];
     let activeProfileId = '';
-    let profileEditorMode = 'saved';
 
     function getProfileInputs() {
         return Array.from(document.querySelectorAll('.prof-input'));
@@ -740,8 +818,9 @@
     }
 
     function normalizeProfileInputs(values) {
-        const normalized = Array.isArray(values) ? values.slice(0, 16).map((value) => value || '') : [];
-        while (normalized.length < 16) {
+        const targetLength = maxProfileMinute + 1;
+        const normalized = Array.isArray(values) ? values.slice(0, targetLength).map((value) => value || '') : [];
+        while (normalized.length < targetLength) {
             normalized.push('');
         }
         return normalized;
@@ -765,6 +844,15 @@
         } catch (error) {
             return null;
         }
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     function loadProfileLibrary() {
@@ -813,23 +901,55 @@
         updateProfileRowVisibility();
     }
 
-    function renderProfileSelect() {
-        const select = document.getElementById('profileSelect');
-        select.innerHTML = '';
+    function renderProfileList() {
+        const list = document.getElementById('profileList');
+        list.innerHTML = '';
+
         profileLibrary.forEach((profile) => {
-            const option = document.createElement('option');
-            option.value = profile.id;
-            option.textContent = profile.name;
-            select.appendChild(option);
+            const row = document.createElement('div');
+            row.className = `profile-row${profile.id === activeProfileId ? ' is-active' : ''}`;
+            row.setAttribute('data-profile-id', profile.id);
+            row.innerHTML = `
+                <button class="profile-delete-btn" type="button" aria-label="Delete ${escapeHtml(profile.name)}" aria-hidden="true" tabindex="-1">×</button>
+                <div class="profile-row-body">
+                    <input class="profile-name" type="text" value="${escapeHtml(profile.name)}" aria-label="Profile name">
+                </div>
+            `;
+            list.appendChild(row);
+            attachProfileRowBehavior(row, profile.id);
         });
-        select.value = activeProfileId;
-        updateProfileActionState();
+
+        const createButton = document.createElement('button');
+        createButton.id = 'createProfileBtn';
+        createButton.className = 'profile-create-btn';
+        createButton.type = 'button';
+        createButton.textContent = '+ Create New';
+        createButton.addEventListener('click', createProfile);
+        list.appendChild(createButton);
     }
 
-    function updateProfileActionState() {
-        const deleteProfileBtn = document.getElementById('deleteProfileBtn');
-        const isSavedProfile = profileEditorMode === 'saved';
-        deleteProfileBtn.disabled = !isSavedProfile || profileLibrary.length <= 1;
+    function updateProfileListActiveState() {
+        document.querySelectorAll('.profile-row').forEach((row) => {
+            row.classList.toggle('is-active', row.getAttribute('data-profile-id') === activeProfileId);
+        });
+    }
+
+    function selectProfile(profileId, renderList = true) {
+        if (!profileLibrary.some((profile) => profile.id === profileId)) {
+            return;
+        }
+        activeProfileId = profileId;
+        saveProfileLibrary();
+        const activeProfile = getActiveProfile();
+        if (activeProfile) {
+            setProfileInputs(activeProfile.inputs);
+        }
+        if (renderList) {
+            renderProfileList();
+        } else {
+            updateProfileListActiveState();
+        }
+        calculateAndApplyProfile();
     }
 
     function loadActiveProfileIntoEditor() {
@@ -837,36 +957,152 @@
         if (!activeProfile) {
             return;
         }
-        profileEditorMode = 'saved';
         activeProfileId = activeProfile.id;
-        document.getElementById('profileNameInput').value = activeProfile.name;
         setProfileInputs(activeProfile.inputs);
-        renderProfileSelect();
+        renderProfileList();
     }
 
     function saveEditorProfile() {
-        const profileName = document.getElementById('profileNameInput').value.trim() || 'Untitled';
         const inputs = normalizeProfileInputs(getProfileInputValues());
-        let activeProfile = getActiveProfile();
-        if (profileEditorMode !== 'saved' || !activeProfile) {
-            activeProfile = { id: createProfileId(), name: profileName, inputs };
-            profileLibrary.push(activeProfile);
-            activeProfileId = activeProfile.id;
-        } else {
-            activeProfile.name = profileName;
+        const activeProfile = getActiveProfile();
+        if (activeProfile) {
             activeProfile.inputs = inputs;
         }
-        profileEditorMode = 'saved';
         saveProfileLibrary();
-        renderProfileSelect();
+        renderProfileList();
         return inputs;
     }
 
-    function startDraftProfile(name, inputs) {
-        profileEditorMode = 'draft';
-        document.getElementById('profileNameInput').value = name;
-        setProfileInputs(inputs);
-        updateProfileActionState();
+    function createProfile() {
+        const profile = {
+            id: createProfileId(),
+            name: `Profile ${profileLibrary.length + 1}`,
+            inputs: normalizeProfileInputs([])
+        };
+        profileLibrary.push(profile);
+        activeProfileId = profile.id;
+        saveProfileLibrary();
+        loadActiveProfileIntoEditor();
+        calculateAndApplyProfile();
+    }
+
+    function duplicateProfile(profileId) {
+        const sourceProfile = profileLibrary.find((profile) => profile.id === profileId);
+        if (!sourceProfile) {
+            return;
+        }
+        const profile = {
+            id: createProfileId(),
+            name: `${sourceProfile.name} Copy`,
+            inputs: normalizeProfileInputs(sourceProfile.inputs)
+        };
+        profileLibrary.push(profile);
+        activeProfileId = profile.id;
+        saveProfileLibrary();
+        loadActiveProfileIntoEditor();
+        calculateAndApplyProfile();
+    }
+
+    function deleteProfile(profileId) {
+        if (profileLibrary.length <= 1) {
+            return;
+        }
+        profileLibrary = profileLibrary.filter((profile) => profile.id !== profileId);
+        if (activeProfileId === profileId) {
+            activeProfileId = profileLibrary[0].id;
+            setProfileInputs(profileLibrary[0].inputs);
+            calculateAndApplyProfile();
+        }
+        saveProfileLibrary();
+        renderProfileList();
+    }
+
+    function attachProfileRowBehavior(row, profileId) {
+        const body = row.querySelector('.profile-row-body');
+        const nameInput = row.querySelector('.profile-name');
+        const deleteButton = row.querySelector('.profile-delete-btn');
+        let pointerStartX = 0;
+        let pointerStartY = 0;
+        let longPressTimer = null;
+        let didLongPress = false;
+
+        const clearLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        const setDeleteOpen = (isOpen) => {
+            row.classList.toggle('is-delete-open', isOpen);
+            deleteButton.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+            deleteButton.tabIndex = isOpen ? 0 : -1;
+        };
+
+        body.addEventListener('pointerdown', (event) => {
+            pointerStartX = event.clientX;
+            pointerStartY = event.clientY;
+            didLongPress = false;
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+                didLongPress = true;
+                duplicateProfile(profileId);
+            }, 650);
+        });
+
+        body.addEventListener('pointermove', (event) => {
+            const deltaX = event.clientX - pointerStartX;
+            const deltaY = event.clientY - pointerStartY;
+            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+                clearLongPress();
+            }
+            if (deltaX < -44 && Math.abs(deltaY) < 35 && profileLibrary.length > 1) {
+                setDeleteOpen(true);
+            } else if (deltaX > 20) {
+                setDeleteOpen(false);
+            }
+        });
+
+        body.addEventListener('pointerup', () => {
+            clearLongPress();
+        });
+
+        body.addEventListener('pointercancel', clearLongPress);
+        body.addEventListener('click', (event) => {
+            if (!didLongPress && event.target !== nameInput) {
+                selectProfile(profileId);
+            }
+        });
+
+        nameInput.addEventListener('focus', () => {
+            selectProfile(profileId, false);
+        });
+
+        nameInput.addEventListener('click', () => {
+            selectProfile(profileId, false);
+        });
+
+        nameInput.addEventListener('input', () => {
+            const profile = profileLibrary.find((item) => item.id === profileId);
+            if (!profile) {
+                return;
+            }
+            profile.name = nameInput.value.trim() || 'Untitled';
+            saveProfileLibrary();
+        });
+
+        nameInput.addEventListener('blur', () => {
+            const profile = profileLibrary.find((item) => item.id === profileId);
+            if (profile) {
+                nameInput.value = profile.name;
+            }
+            renderProfileList();
+        });
+
+        deleteButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            deleteProfile(profileId);
+        });
     }
 
     function updateProfileRowVisibility() {
@@ -954,7 +1190,7 @@
     window.addEventListener('DOMContentLoaded', () => {
         const rowList = document.getElementById('profileRowList');
 
-        for (let i = 0; i <= 15; i++) {
+        for (let i = 0; i <= maxProfileMinute; i++) {
             const div = document.createElement('div');
             div.className = 'prof-row';
             div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---">`;
@@ -991,39 +1227,6 @@
         localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
         calculateAndApplyProfile();
         document.getElementById('profileEditor').style.display = 'none';
-    });
-
-    document.getElementById('profileSelect').addEventListener('change', (event) => {
-        activeProfileId = event.target.value;
-        profileEditorMode = 'saved';
-        saveProfileLibrary();
-        loadActiveProfileIntoEditor();
-        calculateAndApplyProfile();
-    });
-
-    document.getElementById('newProfileBtn').addEventListener('click', () => {
-        startDraftProfile(`Profile ${profileLibrary.length + 1}`, ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    });
-
-    document.getElementById('duplicateProfileBtn').addEventListener('click', () => {
-        const activeProfile = getActiveProfile();
-        const sourceName = activeProfile ? activeProfile.name : document.getElementById('profileNameInput').value.trim() || 'Profile';
-        startDraftProfile(`${sourceName} Copy`, getProfileInputValues());
-    });
-
-    document.getElementById('clearProfileBtn').addEventListener('click', () => {
-        setProfileInputs(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-    });
-
-    document.getElementById('deleteProfileBtn').addEventListener('click', () => {
-        if (profileLibrary.length <= 1 || profileEditorMode !== 'saved') {
-            return;
-        }
-        profileLibrary = profileLibrary.filter((profile) => profile.id !== activeProfileId);
-        activeProfileId = profileLibrary[0].id;
-        saveProfileLibrary();
-        loadActiveProfileIntoEditor();
-        calculateAndApplyProfile();
     });
 
     document.querySelectorAll('.settings-tab').forEach((tab) => {
