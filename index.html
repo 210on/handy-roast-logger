@@ -99,7 +99,169 @@
     .modal-content p {
         font-size: 0.8rem;
         color: var(--text-secondary);
-        margin-bottom: 20px;
+        margin: 0 0 16px 0;
+    }
+
+    .settings-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        background: #edf2f7;
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 18px;
+    }
+
+    .settings-tab {
+        border: none;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 9px 10px;
+        cursor: pointer;
+    }
+
+    .settings-tab.is-active {
+        background: var(--surface);
+        color: var(--text-primary);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .settings-panel[hidden] {
+        display: none;
+    }
+
+    .profile-controls,
+    .profile-actions,
+    .settings-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .profile-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .settings-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .settings-label {
+        font-size: 0.72rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .settings-input,
+    .settings-select {
+        border: none;
+        background: #edf2f7;
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        font-weight: 700;
+        padding: 11px 12px;
+        width: 100%;
+    }
+
+    .settings-input:focus,
+    .settings-select:focus {
+        outline: 2px solid var(--text-primary);
+    }
+
+    .settings-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        background: #f4f7fb;
+        border-radius: 12px;
+        padding: 12px;
+    }
+
+    .settings-row-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .settings-row-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .settings-row-meta {
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        line-height: 1.35;
+    }
+
+    .settings-toggle {
+        appearance: none;
+        width: 44px;
+        height: 26px;
+        border-radius: 999px;
+        background: #cbd5e1;
+        position: relative;
+        flex: 0 0 auto;
+        transition: background 0.2s ease;
+    }
+
+    .settings-toggle::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        transition: transform 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    }
+
+    .settings-toggle:checked {
+        background: var(--accent-green);
+    }
+
+    .settings-toggle:checked::after {
+        transform: translateX(18px);
+    }
+
+    .settings-toggle:disabled {
+        opacity: 0.5;
+    }
+
+    .secondary-btn,
+    .danger-btn {
+        border: none;
+        border-radius: 10px;
+        background: #edf2f7;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 11px 12px;
+    }
+
+    .danger-btn {
+        color: var(--accent-red);
+    }
+
+    .secondary-btn:disabled,
+    .danger-btn:disabled {
+        cursor: default;
+        opacity: 0.45;
     }
 
     .prof-row-list {
@@ -139,7 +301,8 @@
         outline: 2px solid var(--text-primary);
     }
 
-    #saveProfileBtn {
+    #saveProfileBtn,
+    #testCueBtn {
         background-color: var(--text-primary);
         color: white;
         width: 100%;
@@ -436,15 +599,58 @@
 
 <header>
     <h1>ROAST LOGGER</h1>
-    <button id="profileToggleBtn" aria-label="Target profile settings">⚙️ Profile</button>
+    <button id="profileToggleBtn" aria-label="Settings">⚙️ Settings</button>
 </header>
 
 <div id="profileEditor">
     <div class="modal-content">
-        <h3>Target Profile</h3>
-        <p>各分の目標温度を入力（未入力は自動補間）</p>
-        <div class="prof-row-list" id="profileRowList"></div>
-        <button id="saveProfileBtn" aria-label="Apply target profile">Apply Profile</button>
+        <h3>Settings</h3>
+        <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+            <button class="settings-tab is-active" type="button" id="profileTabBtn" data-panel="profilePanel" role="tab" aria-selected="true">Profile</button>
+            <button class="settings-tab" type="button" id="cueTabBtn" data-panel="cuePanel" role="tab" aria-selected="false">Cue</button>
+        </div>
+
+        <section id="profilePanel" class="settings-panel" role="tabpanel" aria-labelledby="profileTabBtn">
+            <p>各分の目標温度を入力（未入力は自動補間）</p>
+            <div class="profile-controls">
+                <label class="settings-field" for="profileSelect">
+                    <span class="settings-label">Saved Profile</span>
+                    <select id="profileSelect" class="settings-select" aria-label="Saved target profiles"></select>
+                </label>
+                <label class="settings-field" for="profileNameInput">
+                    <span class="settings-label">Profile Name</span>
+                    <input id="profileNameInput" class="settings-input" type="text" autocomplete="off" placeholder="Default">
+                </label>
+            </div>
+            <div class="profile-actions">
+                <button id="newProfileBtn" class="secondary-btn" type="button" aria-label="Create new profile">New</button>
+                <button id="duplicateProfileBtn" class="secondary-btn" type="button" aria-label="Duplicate current profile">Copy</button>
+                <button id="clearProfileBtn" class="secondary-btn" type="button" aria-label="Clear profile fields">Clear Fields</button>
+                <button id="deleteProfileBtn" class="danger-btn" type="button" aria-label="Delete selected profile">Delete</button>
+            </div>
+            <div class="prof-row-list" id="profileRowList"></div>
+            <button id="saveProfileBtn" type="button" aria-label="Apply and save target profile">Apply Profile</button>
+        </section>
+
+        <section id="cuePanel" class="settings-panel" role="tabpanel" aria-labelledby="cueTabBtn" hidden>
+            <div class="settings-list">
+                <label class="settings-row" for="beepEnabledInput">
+                    <span class="settings-row-text">
+                        <span class="settings-row-title">Beep</span>
+                        <span class="settings-row-meta">10秒ごとの音</span>
+                    </span>
+                    <input id="beepEnabledInput" class="settings-toggle" type="checkbox">
+                </label>
+                <label class="settings-row" for="hapticEnabledInput">
+                    <span class="settings-row-text">
+                        <span class="settings-row-title">Haptic</span>
+                        <span class="settings-row-meta" id="hapticSupportText">10秒ごとの振動</span>
+                    </span>
+                    <input id="hapticEnabledInput" class="settings-toggle" type="checkbox">
+                </label>
+            </div>
+            <button id="testCueBtn" type="button">Test Cue</button>
+        </section>
     </div>
 </div>
 
@@ -516,7 +722,14 @@
 <script>
     let referenceProfile = [];
     const profileCacheVersion = '2026-06-default-v1';
+    const profileLibraryCacheVersion = '2026-06-profile-library-v1';
+    const profileLibraryKey = 'roastProfileLibrary';
+    const profileLibraryVersionKey = 'roastProfileLibraryVersion';
+    const activeProfileKey = 'activeRoastProfileId';
     const defaultProfileInputs = ['150', '80', '105', '128', '149', '167', '182', '194', '202', '206', '209', '', '', '', '', ''];
+    let profileLibrary = [];
+    let activeProfileId = '';
+    let profileEditorMode = 'saved';
 
     function getProfileInputs() {
         return Array.from(document.querySelectorAll('.prof-input'));
@@ -524,6 +737,136 @@
 
     function getProfileInputValues() {
         return getProfileInputs().map((input) => input.value);
+    }
+
+    function normalizeProfileInputs(values) {
+        const normalized = Array.isArray(values) ? values.slice(0, 16).map((value) => value || '') : [];
+        while (normalized.length < 16) {
+            normalized.push('');
+        }
+        return normalized;
+    }
+
+    function createProfileId() {
+        return `profile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    }
+
+    function createDefaultProfile(name = 'Default') {
+        return {
+            id: createProfileId(),
+            name,
+            inputs: normalizeProfileInputs(defaultProfileInputs)
+        };
+    }
+
+    function readJsonStorage(key) {
+        try {
+            return JSON.parse(localStorage.getItem(key));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function loadProfileLibrary() {
+        const savedVersion = localStorage.getItem(profileLibraryVersionKey);
+        const savedLibrary = readJsonStorage(profileLibraryKey);
+        if (savedVersion === profileLibraryCacheVersion && Array.isArray(savedLibrary) && savedLibrary.length > 0) {
+            const profiles = savedLibrary
+                .filter((profile) => profile && profile.id)
+                .map((profile) => ({
+                    id: profile.id,
+                    name: profile.name || 'Untitled',
+                    inputs: normalizeProfileInputs(profile.inputs)
+                }));
+            if (profiles.length > 0) {
+                return profiles;
+            }
+        }
+
+        const legacyInputs = readJsonStorage('roastProfileCache');
+        const legacyVersion = localStorage.getItem('roastProfileCacheVersion');
+        const migratedProfile = legacyVersion === profileCacheVersion && Array.isArray(legacyInputs)
+            ? { id: createProfileId(), name: 'Default', inputs: normalizeProfileInputs(legacyInputs) }
+            : createDefaultProfile();
+
+        localStorage.setItem(profileLibraryVersionKey, profileLibraryCacheVersion);
+        localStorage.setItem(profileLibraryKey, JSON.stringify([migratedProfile]));
+        localStorage.setItem(activeProfileKey, migratedProfile.id);
+        return [migratedProfile];
+    }
+
+    function saveProfileLibrary() {
+        localStorage.setItem(profileLibraryVersionKey, profileLibraryCacheVersion);
+        localStorage.setItem(profileLibraryKey, JSON.stringify(profileLibrary));
+        localStorage.setItem(activeProfileKey, activeProfileId);
+    }
+
+    function getActiveProfile() {
+        return profileLibrary.find((profile) => profile.id === activeProfileId) || profileLibrary[0];
+    }
+
+    function setProfileInputs(values) {
+        const normalized = normalizeProfileInputs(values);
+        getProfileInputs().forEach((input, index) => {
+            input.value = normalized[index] || '';
+        });
+        updateProfileRowVisibility();
+    }
+
+    function renderProfileSelect() {
+        const select = document.getElementById('profileSelect');
+        select.innerHTML = '';
+        profileLibrary.forEach((profile) => {
+            const option = document.createElement('option');
+            option.value = profile.id;
+            option.textContent = profile.name;
+            select.appendChild(option);
+        });
+        select.value = activeProfileId;
+        updateProfileActionState();
+    }
+
+    function updateProfileActionState() {
+        const deleteProfileBtn = document.getElementById('deleteProfileBtn');
+        const isSavedProfile = profileEditorMode === 'saved';
+        deleteProfileBtn.disabled = !isSavedProfile || profileLibrary.length <= 1;
+    }
+
+    function loadActiveProfileIntoEditor() {
+        const activeProfile = getActiveProfile();
+        if (!activeProfile) {
+            return;
+        }
+        profileEditorMode = 'saved';
+        activeProfileId = activeProfile.id;
+        document.getElementById('profileNameInput').value = activeProfile.name;
+        setProfileInputs(activeProfile.inputs);
+        renderProfileSelect();
+    }
+
+    function saveEditorProfile() {
+        const profileName = document.getElementById('profileNameInput').value.trim() || 'Untitled';
+        const inputs = normalizeProfileInputs(getProfileInputValues());
+        let activeProfile = getActiveProfile();
+        if (profileEditorMode !== 'saved' || !activeProfile) {
+            activeProfile = { id: createProfileId(), name: profileName, inputs };
+            profileLibrary.push(activeProfile);
+            activeProfileId = activeProfile.id;
+        } else {
+            activeProfile.name = profileName;
+            activeProfile.inputs = inputs;
+        }
+        profileEditorMode = 'saved';
+        saveProfileLibrary();
+        renderProfileSelect();
+        return inputs;
+    }
+
+    function startDraftProfile(name, inputs) {
+        profileEditorMode = 'draft';
+        document.getElementById('profileNameInput').value = name;
+        setProfileInputs(inputs);
+        updateProfileActionState();
     }
 
     function updateProfileRowVisibility() {
@@ -610,28 +953,26 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         const rowList = document.getElementById('profileRowList');
-        const savedInputs = JSON.parse(localStorage.getItem('roastProfileCache')) || [];
-        const savedVersion = localStorage.getItem('roastProfileCacheVersion');
-        const useSavedInputs = savedVersion === profileCacheVersion && savedInputs.length > 0;
-        const initialInputs = useSavedInputs ? savedInputs : defaultProfileInputs;
 
         for (let i = 0; i <= 15; i++) {
             const div = document.createElement('div');
             div.className = 'prof-row';
-            const savedVal = initialInputs[i] || "";
-            div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---" value="${savedVal}">`;
+            div.innerHTML = `<span>${i}:00</span><input type="number" class="prof-input" data-min="${i}" placeholder="---">`;
             rowList.appendChild(div);
         }
 
+        profileLibrary = loadProfileLibrary();
+        activeProfileId = localStorage.getItem(activeProfileKey) || profileLibrary[0].id;
+        if (!profileLibrary.some((profile) => profile.id === activeProfileId)) {
+            activeProfileId = profileLibrary[0].id;
+        }
+
         attachProfileInputBehavior();
-        updateProfileRowVisibility();
-        if (initialInputs.some((value) => value !== '')) {
+        loadActiveProfileIntoEditor();
+        if (getProfileInputValues().some((value) => value !== '')) {
             calculateAndApplyProfile();
         }
-        if (!useSavedInputs) {
-            localStorage.setItem('roastProfileCache', JSON.stringify(initialInputs));
-            localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
-        }
+        initializeCueSettings();
     });
 
     document.getElementById('profileToggleBtn').addEventListener('click', () => {
@@ -645,11 +986,56 @@
     });
 
     document.getElementById('saveProfileBtn').addEventListener('click', () => {
-        calculateAndApplyProfile();
-        const inputsToSave = getProfileInputValues();
+        const inputsToSave = saveEditorProfile();
         localStorage.setItem('roastProfileCache', JSON.stringify(inputsToSave));
         localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
+        calculateAndApplyProfile();
         document.getElementById('profileEditor').style.display = 'none';
+    });
+
+    document.getElementById('profileSelect').addEventListener('change', (event) => {
+        activeProfileId = event.target.value;
+        profileEditorMode = 'saved';
+        saveProfileLibrary();
+        loadActiveProfileIntoEditor();
+        calculateAndApplyProfile();
+    });
+
+    document.getElementById('newProfileBtn').addEventListener('click', () => {
+        startDraftProfile(`Profile ${profileLibrary.length + 1}`, ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    });
+
+    document.getElementById('duplicateProfileBtn').addEventListener('click', () => {
+        const activeProfile = getActiveProfile();
+        const sourceName = activeProfile ? activeProfile.name : document.getElementById('profileNameInput').value.trim() || 'Profile';
+        startDraftProfile(`${sourceName} Copy`, getProfileInputValues());
+    });
+
+    document.getElementById('clearProfileBtn').addEventListener('click', () => {
+        setProfileInputs(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+    });
+
+    document.getElementById('deleteProfileBtn').addEventListener('click', () => {
+        if (profileLibrary.length <= 1 || profileEditorMode !== 'saved') {
+            return;
+        }
+        profileLibrary = profileLibrary.filter((profile) => profile.id !== activeProfileId);
+        activeProfileId = profileLibrary[0].id;
+        saveProfileLibrary();
+        loadActiveProfileIntoEditor();
+        calculateAndApplyProfile();
+    });
+
+    document.querySelectorAll('.settings-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.settings-tab').forEach((button) => {
+                button.classList.toggle('is-active', button === tab);
+                button.setAttribute('aria-selected', button === tab ? 'true' : 'false');
+            });
+            document.querySelectorAll('.settings-panel').forEach((panel) => {
+                panel.hidden = panel.id !== tab.getAttribute('data-panel');
+            });
+        });
     });
 
     document.getElementById('logToggle').addEventListener('click', function () {
@@ -683,6 +1069,12 @@
     let dataQuality = {
         rejectedOutliers: 0
     };
+    const cueSettingsKey = 'roastCueSettings';
+    const defaultCueSettings = {
+        beep: true,
+        haptic: false
+    };
+    let cueSettings = { ...defaultCueSettings };
     const labels = [];
     const rawTemps = [];
     const temps = [];
@@ -703,6 +1095,10 @@
     const roastedWeightInput = document.getElementById('roastedWeightInput');
     const weightLossDisplay = document.getElementById('weightLossDisplay');
     const weightLossMeta = document.getElementById('weightLossMeta');
+    const beepEnabledInput = document.getElementById('beepEnabledInput');
+    const hapticEnabledInput = document.getElementById('hapticEnabledInput');
+    const hapticSupportText = document.getElementById('hapticSupportText');
+    const testCueBtn = document.getElementById('testCueBtn');
 
     if (window['chartjs-plugin-annotation']) {
         Chart.register(window['chartjs-plugin-annotation']);
@@ -910,6 +1306,56 @@
         playOscillatorBeep();
     }
 
+    function supportsHapticCue() {
+        return typeof navigator.vibrate === 'function';
+    }
+
+    function loadCueSettings() {
+        const savedSettings = readJsonStorage(cueSettingsKey);
+        return {
+            ...defaultCueSettings,
+            ...(savedSettings || {})
+        };
+    }
+
+    function saveCueSettings() {
+        cueSettings = {
+            beep: beepEnabledInput.checked,
+            haptic: hapticEnabledInput.checked && supportsHapticCue()
+        };
+        localStorage.setItem(cueSettingsKey, JSON.stringify(cueSettings));
+        applyCueSettingsToUI();
+    }
+
+    function applyCueSettingsToUI() {
+        const hapticSupported = supportsHapticCue();
+        beepEnabledInput.checked = cueSettings.beep;
+        hapticEnabledInput.checked = cueSettings.haptic && hapticSupported;
+        hapticEnabledInput.disabled = !hapticSupported;
+        hapticSupportText.innerText = hapticSupported ? '10秒ごとの振動' : 'このブラウザでは未対応';
+    }
+
+    function initializeCueSettings() {
+        cueSettings = loadCueSettings();
+        if (!supportsHapticCue()) {
+            cueSettings.haptic = false;
+        }
+        applyCueSettingsToUI();
+    }
+
+    function playHapticCue() {
+        if (cueSettings.haptic && supportsHapticCue()) {
+            navigator.vibrate([90]);
+        }
+    }
+
+    async function playCue() {
+        if (cueSettings.beep) {
+            await playBeep();
+        }
+        playHapticCue();
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = SpeechRecognition ? new SpeechRecognition() : null;
     if (recognition) {
@@ -1091,7 +1537,7 @@
             temps[currentSeconds / tickInterval] = null;
             rors[currentSeconds / tickInterval] = null;
             roastChart.update();
-            void playBeep();
+            void playCue();
         }
         currentSeconds++;
     }
@@ -1429,6 +1875,12 @@
 
     greenWeightInput.addEventListener('input', updateWeightLossDisplay);
     roastedWeightInput.addEventListener('input', updateWeightLossDisplay);
+    beepEnabledInput.addEventListener('change', saveCueSettings);
+    hapticEnabledInput.addEventListener('change', saveCueSettings);
+    testCueBtn.addEventListener('click', async () => {
+        await primeAudioOutput();
+        await playCue();
+    });
 
     ['pointerdown', 'touchend', 'keydown'].forEach((eventName) => {
         window.addEventListener(eventName, () => {
