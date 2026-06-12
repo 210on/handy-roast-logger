@@ -1260,6 +1260,7 @@
     let isRoasting = false;
     let wakeLock = null;
     let latestRecordedTemp = null;
+    let bottomTempIndex = null;
     let crackSeconds = null;
     let crackTemp = null;
     let roastPhase = 0;
@@ -1703,14 +1704,45 @@
     }
 
     function calculateRoR() {
-        for (let i = 1; i < temps.length; i++) {
+        bottomTempIndex = findBottomTempIndex();
+        for (let i = 0; i < rors.length; i++) {
+            rors[i] = null;
+        }
+
+        if (bottomTempIndex === null) {
+            rorDisplay.innerText = '--.-';
+            return;
+        }
+
+        rors[bottomTempIndex] = 0;
+        for (let i = bottomTempIndex + 1; i < temps.length; i++) {
             if (temps[i] !== undefined && temps[i] !== null && temps[i - 1] !== undefined && temps[i - 1] !== null) {
                 rors[i] = (temps[i] - temps[i - 1]) * (60 / tickInterval);
             }
         }
-        rors[0] = 0;
+
         const latestValidRoR = rors.slice().reverse().find((value) => value !== undefined && value !== null);
         rorDisplay.innerText = latestValidRoR !== undefined ? latestValidRoR.toFixed(1) : '--.-';
+    }
+
+    function findBottomTempIndex() {
+        const capturedPoints = rawTemps
+            .map((temp, index) => ({ temp, index }))
+            .filter((point) => point.temp !== undefined && point.temp !== null && Number.isFinite(point.temp));
+
+        if (capturedPoints.length < 2) {
+            return null;
+        }
+
+        let bottomPoint = capturedPoints[0];
+        capturedPoints.forEach((point) => {
+            if (point.temp < bottomPoint.temp) {
+                bottomPoint = point;
+            }
+        });
+
+        const hasRisingPointAfterBottom = capturedPoints.some((point) => point.index > bottomPoint.index && point.temp > bottomPoint.temp);
+        return hasRisingPointAfterBottom ? bottomPoint.index : null;
     }
 
     function updateCrackInfo() {
@@ -1848,6 +1880,7 @@
         latestTargetTime = 0;
         currentSeconds = 0;
         latestRecordedTemp = null;
+        bottomTempIndex = null;
         crackSeconds = null;
         crackTemp = null;
         roastStartedAt = null;
@@ -1939,6 +1972,9 @@
             ['roast_stopped_at', roastStoppedAt ? roastStoppedAt.toISOString() : ''],
             ['roast_duration_sec', durationSeconds],
             ['roast_duration', formatTime(durationSeconds)],
+            ['bottom_time_sec', bottomTempIndex !== null ? labels[bottomTempIndex] : ''],
+            ['bottom_time', bottomTempIndex !== null ? formatTime(labels[bottomTempIndex]) : ''],
+            ['bottom_temp_c', bottomTempIndex !== null ? formatNumber(rawTemps[bottomTempIndex]) : ''],
             ['crack_time_sec', crackSeconds !== null ? crackSeconds : ''],
             ['crack_time', crackSeconds !== null ? formatTime(crackSeconds) : ''],
             ['crack_temp_c', crackTemp !== null ? formatNumber(crackTemp) : ''],
@@ -1987,6 +2023,7 @@
         crackSeconds = null;
         crackTemp = null;
         latestRecordedTemp = null;
+        bottomTempIndex = null;
         roastStartedAt = new Date();
         roastStoppedAt = null;
         roastStopSeconds = null;
