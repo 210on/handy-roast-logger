@@ -436,7 +436,7 @@
 
 <header>
     <h1>ROAST LOGGER</h1>
-    <button id="profileToggleBtn">⚙️ Profile</button>
+    <button id="profileToggleBtn" aria-label="Target profile settings">⚙️ Profile</button>
 </header>
 
 <div id="profileEditor">
@@ -444,7 +444,7 @@
         <h3>Target Profile</h3>
         <p>各分の目標温度を入力（未入力は自動補間）</p>
         <div class="prof-row-list" id="profileRowList"></div>
-        <button id="saveProfileBtn">Apply Profile</button>
+        <button id="saveProfileBtn" aria-label="Apply target profile">Apply Profile</button>
     </div>
 </div>
 
@@ -468,7 +468,7 @@
         <label class="weight-field" for="greenWeightInput">
             <span class="weight-label">Green Beans</span>
             <span class="weight-input-wrap">
-                <input id="greenWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="100.0">
+                <input id="greenWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="100.0" aria-label="Green beans weight in grams">
                 <span class="weight-unit">g</span>
             </span>
         </label>
@@ -476,7 +476,7 @@
             <label class="weight-field" for="roastedWeightInput">
                 <span class="weight-label">Roasted Beans</span>
                 <span class="weight-input-wrap">
-                    <input id="roastedWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="84.0" disabled>
+                    <input id="roastedWeightInput" class="weight-input" type="number" inputmode="decimal" min="0" step="0.1" placeholder="84.0" disabled aria-label="Roasted beans weight in grams">
                     <span class="weight-unit">g</span>
                 </span>
             </label>
@@ -497,7 +497,7 @@
 <div id="log"></div>
 
 <div id="actionUI">
-    <button id="mainActionBtn" class="btn-start">
+    <button id="mainActionBtn" class="btn-start" aria-label="Start roast">
         <svg id="btnIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         <span id="btnText">START</span>
     </button>
@@ -680,6 +680,9 @@
     let audioCtx = null;
     let beepAudio = null;
     let audioOutputPrimed = false;
+    let dataQuality = {
+        rejectedOutliers: 0
+    };
     const labels = [];
     const rawTemps = [];
     const temps = [];
@@ -916,11 +919,12 @@
 
         recognition.onresult = (event) => {
             const transcript = event.results[event.results.length - 1][0].transcript;
-            const match = transcript.match(/\d+([.点]\d+)?/);
-            if (match && roastPhase > 0 && roastPhase < 3) {
-                const temp = parseFloat(match[0].replace('点', '.'));
+            const parsedTemp = parseRecognizedTemperature(transcript);
+            if (parsedTemp !== null && roastPhase > 0 && roastPhase < 3) {
+                const temp = parsedTemp.value;
                 const outlierCheck = detectOutlier(latestTargetTime, temp);
                 if (outlierCheck.isOutlier) {
+                    dataQuality.rejectedOutliers++;
                     addLog(latestTargetTime, `⚠️ Ignored ${temp}℃ (${outlierCheck.reason})`);
                     return;
                 }
@@ -942,6 +946,29 @@
                 }
             }
         };
+    }
+
+    function normalizeNumericText(value) {
+        return value
+            .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
+            .replace(/[．。点]/g, '.')
+            .replace(/[，、]/g, '.')
+            .replace(/\s+/g, '');
+    }
+
+    function parseRecognizedTemperature(transcript) {
+        const normalized = normalizeNumericText(transcript);
+        const match = normalized.match(/\d+(?:\.\d+)?/);
+        if (!match) {
+            return null;
+        }
+
+        const token = match[0];
+        const value = token.includes('.') || token.length !== 4
+            ? parseFloat(token)
+            : parseFloat(token) / 10;
+
+        return Number.isFinite(value) ? { value, token } : null;
     }
 
     function findPreviousValidIndex(startIndex) {
@@ -1141,9 +1168,16 @@
     }
 
     function setActionButton(label, className, iconPath) {
+        const actionLabels = {
+            START: 'Start roast',
+            CRACK: 'Record first crack',
+            STOP: 'Stop roast',
+            SAVE: 'Save roast log'
+        };
         btnText.innerText = label;
         mainActionBtn.className = className;
         btnIcon.innerHTML = `<path d="${iconPath}"/>`;
+        mainActionBtn.setAttribute('aria-label', actionLabels[label] || label);
         mainActionBtn.disabled = false;
     }
 
@@ -1171,6 +1205,9 @@
         roastStoppedAt = null;
         roastStopSeconds = null;
         roastPhase = 0;
+        dataQuality = {
+            rejectedOutliers: 0
+        };
 
         timerDisplay.innerText = '00:00';
         tempDisplay.innerText = '---';
@@ -1214,6 +1251,29 @@
         return `${year}${month}${day}-${hours}${minutes}${seconds}`;
     }
 
+    function calculateDataQuality(sampleCount) {
+        let capturedPoints = 0;
+        let interpolatedPoints = 0;
+        let missedSlots = 0;
+
+        for (let i = 0; i < sampleCount; i++) {
+            if (rawTemps[i] !== undefined && rawTemps[i] !== null) {
+                capturedPoints++;
+            } else if (temps[i] !== undefined && temps[i] !== null) {
+                interpolatedPoints++;
+            } else {
+                missedSlots++;
+            }
+        }
+
+        return {
+            capturedPoints,
+            interpolatedPoints,
+            missedSlots,
+            rejectedOutliers: dataQuality.rejectedOutliers
+        };
+    }
+
     function exportCSV() {
         const exportedAt = new Date();
         const greenWeight = parseWeight(greenWeightInput);
@@ -1221,6 +1281,7 @@
         const weightLossPercent = updateWeightLossDisplay();
         const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds - 1, 0);
         const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / tickInterval) + 1);
+        const qualitySummary = calculateDataQuality(sampleCount);
 
         const rows = [
             ['item', 'value'],
@@ -1235,19 +1296,29 @@
             ['green_weight_g', greenWeight !== null ? formatNumber(greenWeight) : ''],
             ['roasted_weight_g', roastedWeight !== null ? formatNumber(roastedWeight) : ''],
             ['weight_loss_percent', weightLossPercent !== null ? weightLossPercent.toFixed(1) : ''],
+            ['captured_points', qualitySummary.capturedPoints],
+            ['interpolated_points', qualitySummary.interpolatedPoints],
+            ['missed_slots', qualitySummary.missedSlots],
+            ['rejected_outliers', qualitySummary.rejectedOutliers],
             [],
-            ['time_sec', 'time_label', 'target_temp_c', 'actual_temp_c', 'ror_c_per_min', 'is_crack']
+            ['time_sec', 'time_label', 'target_temp_c', 'actual_temp_c', 'ror_c_per_min', 'is_crack', 'data_source']
         ];
 
         for (let i = 0; i < sampleCount; i++) {
             const second = labels[i];
+            const dataSource = rawTemps[i] !== undefined && rawTemps[i] !== null
+                ? 'captured'
+                : temps[i] !== undefined && temps[i] !== null
+                    ? 'interpolated'
+                    : '';
             rows.push([
                 second,
                 formatTime(second),
                 referenceProfile[i] !== undefined ? formatNumber(referenceProfile[i]) : '',
                 temps[i] !== undefined && temps[i] !== null ? formatNumber(temps[i]) : '',
                 rors[i] !== undefined && rors[i] !== null ? formatNumber(rors[i]) : '',
-                crackSeconds !== null && second === crackSeconds ? '1' : ''
+                crackSeconds !== null && second === crackSeconds ? '1' : '',
+                dataSource
             ]);
         }
 
@@ -1270,6 +1341,9 @@
         roastStartedAt = new Date();
         roastStoppedAt = null;
         roastStopSeconds = null;
+        dataQuality = {
+            rejectedOutliers: 0
+        };
 
         labels.length = 0;
         rawTemps.length = 0;
