@@ -27,7 +27,8 @@ function extractFunctionSource(name) {
 
 function createLogicContext() {
     const context = {
-        tickInterval: 10,
+        dataInterval: 5,
+        cueInterval: 10,
         rawTemps: [],
         temps: [],
         rors: [],
@@ -47,6 +48,8 @@ function createLogicContext() {
         'formatProfileTemperatureValue',
         'parseProfilePasteLine',
         'parseProfilePasteText',
+        'normalizeCueInterval',
+        'roundToDataSlot',
         'parseRecognizedTemperature',
         'findPreviousValidIndex',
         'detectOutlier',
@@ -98,13 +101,31 @@ test('parseProfilePasteText accepts temp-time, time-temp, minute-temp, and CSV e
 
 test('detectOutlier rejects impossible values and late hard jumps', () => {
     const logic = createLogicContext();
-    logic.referenceProfile = [150, 80, 105, 128, 149, 167, 182, 194, 202, 206, 209];
-    logic.rawTemps[54] = 207;
+    logic.referenceProfile[110] = 207;
+    logic.referenceProfile[112] = 207;
+    logic.rawTemps[108] = 207;
 
     assert.equal(logic.detectOutlier(560, 2100).isOutlier, true);
     assert.equal(logic.detectOutlier(560, 2100).reason, 'outside valid temperature range');
     assert.equal(logic.detectOutlier(550, 208).isOutlier, false);
     assert.equal(logic.detectOutlier(550, 285).isOutlier, true);
+});
+
+test('roundToDataSlot records spoken readings near the closest 5 second slot', () => {
+    const logic = createLogicContext();
+
+    assert.equal(logic.roundToDataSlot(531), 530);
+    assert.equal(logic.roundToDataSlot(533), 535);
+    assert.equal(logic.roundToDataSlot(0), 0);
+});
+
+test('normalizeCueInterval keeps cue choices limited to 10 or 15 seconds', () => {
+    const logic = createLogicContext();
+
+    assert.equal(logic.normalizeCueInterval(15), 15);
+    assert.equal(logic.normalizeCueInterval('15'), 15);
+    assert.equal(logic.normalizeCueInterval(10), 10);
+    assert.equal(logic.normalizeCueInterval('5'), 10);
 });
 
 test('interpolateMissingData fills skipped slots between captured readings', () => {
@@ -131,9 +152,9 @@ test('calculateRoR starts after bottom temperature has a rising captured point',
 
     assert.equal(logic.bottomTempIndex, 2);
     assert.equal(logic.rors[2], 0);
-    assert.equal(logic.rors[3], 42);
-    assert.equal(logic.rors[4], 48);
-    assert.equal(logic.rorDisplay.innerText, '48.0');
+    assert.equal(logic.rors[3], 84);
+    assert.equal(logic.rors[4], 96);
+    assert.equal(logic.rorDisplay.innerText, '96.0');
 });
 
 test('calculateDataQuality summarizes captured, interpolated, missed, and rejected values', () => {

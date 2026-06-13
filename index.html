@@ -265,6 +265,11 @@
         width: 100%;
     }
 
+    .settings-row .settings-select {
+        width: 96px;
+        flex: 0 0 auto;
+    }
+
     .settings-input:focus,
     .settings-select:focus {
         outline: 2px solid var(--text-primary);
@@ -715,14 +720,24 @@
                 <label class="settings-row" for="beepEnabledInput">
                     <span class="settings-row-text">
                         <span class="settings-row-title">Beep</span>
-                        <span class="settings-row-meta">10秒ごとの音</span>
+                        <span class="settings-row-meta" id="beepSupportText">記録間隔ごとの音</span>
                     </span>
                     <input id="beepEnabledInput" class="settings-toggle" type="checkbox">
+                </label>
+                <label class="settings-row" for="cueIntervalInput">
+                    <span class="settings-row-text">
+                        <span class="settings-row-title">Interval</span>
+                        <span class="settings-row-meta">Cue間隔。記録は最寄り5秒へ丸めます</span>
+                    </span>
+                    <select id="cueIntervalInput" class="settings-select" aria-label="Recording and cue interval">
+                        <option value="10">10 sec</option>
+                        <option value="15">15 sec</option>
+                    </select>
                 </label>
                 <label class="settings-row" for="hapticEnabledInput">
                     <span class="settings-row-text">
                         <span class="settings-row-title">Haptic</span>
-                        <span class="settings-row-meta" id="hapticSupportText">10秒ごとの振動</span>
+                        <span class="settings-row-meta" id="hapticSupportText">記録間隔ごとの振動</span>
                     </span>
                     <input id="hapticEnabledInput" class="settings-toggle" type="checkbox">
                 </label>
@@ -1313,9 +1328,9 @@
                 }
 
                 if (p1.sec === p2.sec) {
-                    referenceProfile[t / 10] = p1.temp;
+                    referenceProfile[t / dataInterval] = p1.temp;
                 } else {
-                    referenceProfile[t / 10] = p1.temp + ((t - p1.sec) / (p2.sec - p1.sec)) * (p2.temp - p1.temp);
+                    referenceProfile[t / dataInterval] = p1.temp + ((t - p1.sec) / (p2.sec - p1.sec)) * (p2.temp - p1.temp);
                 }
             }
         }
@@ -1343,10 +1358,10 @@
 
         attachProfileInputBehavior();
         loadActiveProfileIntoEditor();
+        initializeCueSettings();
         if (getProfileInputValues().some((value) => value !== '')) {
             calculateAndApplyProfile();
         }
-        initializeCueSettings();
     });
 
     document.getElementById('profileToggleBtn').addEventListener('click', () => {
@@ -1393,7 +1408,8 @@
     let timerInterval = null;
     let currentSeconds = 0;
     let lastProcessedSlotIndex = -1;
-    const tickInterval = 10;
+    const dataInterval = 5;
+    let cueInterval = 10;
     const defaultChartMaxSeconds = 180;
     let latestTargetTime = 0;
     let isRoasting = false;
@@ -1417,7 +1433,8 @@
     const cueSettingsKey = 'roastCueSettings';
     const defaultCueSettings = {
         beep: true,
-        haptic: false
+        haptic: false,
+        intervalSec: 10
     };
     let cueSettings = { ...defaultCueSettings };
     const labels = [];
@@ -1441,6 +1458,8 @@
     const weightLossDisplay = document.getElementById('weightLossDisplay');
     const weightLossMeta = document.getElementById('weightLossMeta');
     const beepEnabledInput = document.getElementById('beepEnabledInput');
+    const beepSupportText = document.getElementById('beepSupportText');
+    const cueIntervalInput = document.getElementById('cueIntervalInput');
     const hapticEnabledInput = document.getElementById('hapticEnabledInput');
     const hapticSupportText = document.getElementById('hapticSupportText');
     const testCueBtn = document.getElementById('testCueBtn');
@@ -1478,7 +1497,7 @@
     });
 
     function getReferenceProfileMaxSec() {
-        return referenceProfile.length > 0 ? (referenceProfile.length - 1) * tickInterval : 0;
+        return referenceProfile.length > 0 ? (referenceProfile.length - 1) * dataInterval : 0;
     }
 
     function computeChartMaxSeconds(sec) {
@@ -1498,12 +1517,12 @@
     }
 
     function syncLabelsToRange(maxSec) {
-        const nextLength = Math.floor(maxSec / tickInterval) + 1;
+        const nextLength = Math.floor(maxSec / dataInterval) + 1;
         if (labels.length === nextLength && labels[labels.length - 1] === maxSec) {
             return;
         }
         labels.length = 0;
-        for (let t = 0; t <= maxSec; t += tickInterval) {
+        for (let t = 0; t <= maxSec; t += dataInterval) {
             labels.push(t);
         }
     }
@@ -1655,19 +1674,45 @@
         return typeof navigator.vibrate === 'function';
     }
 
+    function normalizeCueInterval(value) {
+        const interval = parseInt(value, 10);
+        return interval === 15 ? 15 : 10;
+    }
+
+    function applyCueInterval(intervalSec) {
+        const nextInterval = normalizeCueInterval(intervalSec);
+        if (cueInterval === nextInterval) {
+            return;
+        }
+
+        cueInterval = nextInterval;
+        lastProcessedSlotIndex = -1;
+        latestTargetTime = 0;
+
+        if (!isRoasting) {
+            resetChartState();
+            calculateAndApplyProfile();
+        }
+    }
+
     function loadCueSettings() {
         const savedSettings = readJsonStorage(cueSettingsKey);
-        return {
+        const settings = {
             ...defaultCueSettings,
             ...(savedSettings || {})
         };
+        settings.intervalSec = normalizeCueInterval(settings.intervalSec);
+        return settings;
     }
 
     function saveCueSettings() {
+        const nextInterval = isRoasting ? cueInterval : normalizeCueInterval(cueIntervalInput.value);
         cueSettings = {
             beep: beepEnabledInput.checked,
-            haptic: hapticEnabledInput.checked && supportsHapticCue()
+            haptic: hapticEnabledInput.checked && supportsHapticCue(),
+            intervalSec: nextInterval
         };
+        applyCueInterval(cueSettings.intervalSec);
         localStorage.setItem(cueSettingsKey, JSON.stringify(cueSettings));
         applyCueSettingsToUI();
     }
@@ -1675,13 +1720,17 @@
     function applyCueSettingsToUI() {
         const hapticSupported = supportsHapticCue();
         beepEnabledInput.checked = cueSettings.beep;
+        cueIntervalInput.value = String(cueSettings.intervalSec);
+        cueIntervalInput.disabled = isRoasting;
+        beepSupportText.innerText = `${cueSettings.intervalSec}秒ごとの音`;
         hapticEnabledInput.checked = cueSettings.haptic && hapticSupported;
         hapticEnabledInput.disabled = !hapticSupported;
-        hapticSupportText.innerText = hapticSupported ? '10秒ごとの振動' : 'このブラウザでは未対応';
+        hapticSupportText.innerText = hapticSupported ? `${cueSettings.intervalSec}秒ごとの振動` : 'このブラウザでは未対応';
     }
 
     function initializeCueSettings() {
         cueSettings = loadCueSettings();
+        applyCueInterval(cueSettings.intervalSec);
         if (!supportsHapticCue()) {
             cueSettings.haptic = false;
         }
@@ -1713,14 +1762,16 @@
             const parsedTemp = parseRecognizedTemperature(transcript);
             if (parsedTemp !== null && roastPhase > 0 && roastPhase < 3) {
                 const temp = parsedTemp.value;
-                const outlierCheck = detectOutlier(latestTargetTime, temp);
+                const targetTime = roundToDataSlot(getElapsedRoastSeconds());
+                latestTargetTime = targetTime;
+                const outlierCheck = detectOutlier(targetTime, temp);
                 if (outlierCheck.isOutlier) {
                     dataQuality.rejectedOutliers++;
-                    addLog(latestTargetTime, `⚠️ Ignored ${temp}℃ (${outlierCheck.reason})`);
+                    addLog(targetTime, `⚠️ Ignored ${temp}℃ (${outlierCheck.reason})`);
                     return;
                 }
-                processNewData(latestTargetTime, temp);
-                addLog(latestTargetTime, `🎙️ ${temp}℃`);
+                processNewData(targetTime, temp);
+                addLog(targetTime, `🎙️ ${temp}℃`);
             }
         };
 
@@ -1780,7 +1831,7 @@
             return { isOutlier: true, reason: 'outside valid temperature range' };
         }
 
-        const index = targetTimeSec / tickInterval;
+        const index = targetTimeSec / dataInterval;
         const previousIndex = findPreviousValidIndex(index);
         const targetTemp = referenceProfile[index];
         const reasons = [];
@@ -1789,13 +1840,14 @@
         if (previousIndex !== -1) {
             const previousTemp = rawTemps[previousIndex];
             const stepGap = Math.max(index - previousIndex, 1);
-            const changePerStep = Math.abs(newTemp - previousTemp) / stepGap;
+            const elapsedSeconds = Math.max(stepGap * dataInterval, dataInterval);
+            const changePer10Sec = Math.abs(newTemp - previousTemp) * (10 / elapsedSeconds);
             const allowedStepChange = targetTimeSec <= 60 ? 90 : targetTimeSec <= 180 ? 40 : 22;
-            if (changePerStep > allowedStepChange) {
-                reasons.push(`jump ${changePerStep.toFixed(1)}C/10s`);
+            if (changePer10Sec > allowedStepChange) {
+                reasons.push(`jump ${changePer10Sec.toFixed(1)}C/10s`);
             }
-            if (targetTimeSec > 120 && changePerStep > 70) {
-                hardOutlierReason = `jump ${changePerStep.toFixed(1)}C/10s`;
+            if (targetTimeSec > 120 && changePer10Sec > 70) {
+                hardOutlierReason = `jump ${changePer10Sec.toFixed(1)}C/10s`;
             }
         }
 
@@ -1822,7 +1874,7 @@
     }
 
     function processNewData(targetTimeSec, newTemp) {
-        const index = targetTimeSec / tickInterval;
+        const index = targetTimeSec / dataInterval;
         rawTemps[index] = newTemp;
         temps[index] = newTemp;
         latestRecordedTemp = newTemp;
@@ -1858,7 +1910,7 @@
         rors[bottomTempIndex] = 0;
         for (let i = bottomTempIndex + 1; i < temps.length; i++) {
             if (temps[i] !== undefined && temps[i] !== null && temps[i - 1] !== undefined && temps[i - 1] !== null) {
-                rors[i] = (temps[i] - temps[i - 1]) * (60 / tickInterval);
+                rors[i] = (temps[i] - temps[i - 1]) * (60 / dataInterval);
             }
         }
 
@@ -1902,6 +1954,10 @@
         return `${Math.floor(safeSeconds / 60).toString().padStart(2, '0')}:${(safeSeconds % 60).toString().padStart(2, '0')}`;
     }
 
+    function roundToDataSlot(seconds) {
+        return Math.max(0, Math.round(seconds / dataInterval) * dataInterval);
+    }
+
     function getElapsedRoastSeconds() {
         if (!roastStartedAt) {
             return currentSeconds;
@@ -1910,12 +1966,13 @@
     }
 
     function markSampleSlot(slotIndex) {
-        const slotSeconds = slotIndex * tickInterval;
+        const slotSeconds = slotIndex * cueInterval;
+        const dataIndex = slotSeconds / dataInterval;
         latestTargetTime = slotSeconds;
-        if (rawTemps[slotIndex] === undefined) {
-            rawTemps[slotIndex] = null;
-            temps[slotIndex] = null;
-            rors[slotIndex] = null;
+        if (rawTemps[dataIndex] === undefined) {
+            rawTemps[dataIndex] = null;
+            temps[dataIndex] = null;
+            rors[dataIndex] = null;
         }
     }
 
@@ -1925,7 +1982,7 @@
         updateCrackInfo();
         updateXAxisMax(currentSeconds);
 
-        const currentSlotIndex = Math.floor(currentSeconds / tickInterval);
+        const currentSlotIndex = Math.floor(currentSeconds / cueInterval);
         if (currentSlotIndex > lastProcessedSlotIndex) {
             for (let slotIndex = lastProcessedSlotIndex + 1; slotIndex <= currentSlotIndex; slotIndex++) {
                 markSampleSlot(slotIndex);
@@ -2083,6 +2140,7 @@
         setActionButton('START', 'btn-start', 'M8 5v14l11-7z');
         updateWeightInputsState();
         updateConditionalPanels();
+        applyCueSettingsToUI();
     }
 
     function escapeCsvCell(value) {
@@ -2136,7 +2194,7 @@
         const roastedWeight = parseWeight(roastedWeightInput);
         const weightLossPercent = updateWeightLossDisplay();
         const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds, 0);
-        const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / tickInterval) + 1);
+        const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / dataInterval) + 1);
         const qualitySummary = calculateDataQuality(sampleCount);
 
         const rows = [
@@ -2226,6 +2284,7 @@
         roastPhase = 1;
         updateWeightInputsState();
         updateConditionalPanels();
+        applyCueSettingsToUI();
 
         await primeAudioOutput();
 
@@ -2282,6 +2341,7 @@
         roastPhase = 3;
         updateWeightInputsState();
         updateConditionalPanels();
+        applyCueSettingsToUI();
         roastedWeightInput.focus();
     }
 
@@ -2306,6 +2366,7 @@
     greenWeightInput.addEventListener('input', updateWeightLossDisplay);
     roastedWeightInput.addEventListener('input', updateWeightLossDisplay);
     beepEnabledInput.addEventListener('change', saveCueSettings);
+    cueIntervalInput.addEventListener('change', saveCueSettings);
     hapticEnabledInput.addEventListener('change', saveCueSettings);
     testCueBtn.addEventListener('click', async () => {
         await primeAudioOutput();
