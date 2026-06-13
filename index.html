@@ -901,6 +901,135 @@
         updateProfileRowVisibility();
     }
 
+    function parseProfileMinuteToken(token, allowBareMinute = true) {
+        const normalized = normalizeNumericText(String(token).trim());
+        const timeMatch = normalized.match(/^(\d{1,2}):(\d{2})$/);
+        if (timeMatch) {
+            const minutes = parseInt(timeMatch[1], 10);
+            const seconds = parseInt(timeMatch[2], 10);
+            return seconds === 0 ? minutes : null;
+        }
+        if (allowBareMinute && /^\d{1,2}$/.test(normalized)) {
+            return parseInt(normalized, 10);
+        }
+        return null;
+    }
+
+    function parseProfileTemperatureToken(token) {
+        const normalized = normalizeNumericText(String(token).trim());
+        if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
+            return null;
+        }
+        const value = parseFloat(normalized);
+        return Number.isFinite(value) && value >= 0 && value <= 300 ? value : null;
+    }
+
+    function formatProfileTemperatureValue(value) {
+        return Number.isInteger(value) ? String(value) : String(parseFloat(value.toFixed(1)));
+    }
+
+    function parseProfilePasteLine(line, fallbackMinute) {
+        const trimmed = line.trim();
+        if (trimmed === '') {
+            return { skipped: true };
+        }
+
+        const tokens = trimmed.split(/[,\t; ]+/).filter(Boolean);
+        const colonIndex = tokens.findIndex((token) => normalizeNumericText(token).includes(':'));
+        let minute = null;
+        let temp = null;
+
+        if (colonIndex !== -1) {
+            minute = parseProfileMinuteToken(tokens[colonIndex], false);
+            for (let i = colonIndex + 1; i < tokens.length; i++) {
+                temp = parseProfileTemperatureToken(tokens[i]);
+                if (temp !== null) {
+                    break;
+                }
+            }
+            if (temp === null) {
+                for (let i = colonIndex - 1; i >= 0; i--) {
+                    temp = parseProfileTemperatureToken(tokens[i]);
+                    if (temp !== null) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            const numbers = tokens
+                .map((token) => ({ token, value: parseProfileTemperatureToken(token) }))
+                .filter((item) => item.value !== null);
+
+            if (numbers.length === 1) {
+                minute = fallbackMinute;
+                temp = numbers[0].value;
+            } else if (numbers.length >= 2) {
+                const first = numbers[0].value;
+                const second = numbers[1].value;
+                if (Number.isInteger(first) && first >= 0 && first <= maxProfileMinute) {
+                    minute = first;
+                    temp = second;
+                } else if (Number.isInteger(second) && second >= 0 && second <= maxProfileMinute) {
+                    minute = second;
+                    temp = first;
+                } else if (Number.isInteger(first) && first % 60 === 0 && first / 60 <= maxProfileMinute) {
+                    minute = first / 60;
+                    temp = second;
+                }
+            }
+        }
+
+        if (minute === null && temp === null && /[a-zA-Z_]/.test(trimmed)) {
+            return { skipped: true };
+        }
+        if (!Number.isInteger(minute) || minute < 0 || minute > maxProfileMinute || temp === null) {
+            return { invalid: true, line: trimmed };
+        }
+
+        return { minute, value: formatProfileTemperatureValue(temp), line: trimmed };
+    }
+
+    function parseProfilePasteText(text, startMinute = 0) {
+        const values = normalizeProfileInputs(getProfileInputValues());
+        const invalidRows = [];
+        let appliedRows = 0;
+        let sequentialMinute = startMinute;
+
+        String(text).split(/\r?\n/).forEach((line) => {
+            const parsed = parseProfilePasteLine(line, sequentialMinute);
+            if (parsed.skipped) {
+                return;
+            }
+            if (parsed.invalid) {
+                invalidRows.push(parsed.line);
+                sequentialMinute++;
+                return;
+            }
+            values[parsed.minute] = parsed.value;
+            appliedRows++;
+            sequentialMinute = parsed.minute + 1;
+        });
+
+        return { values, invalidRows, appliedRows };
+    }
+
+    function applyProfilePaste(text, startIndex) {
+        const parsed = parseProfilePasteText(text, startIndex);
+        if (parsed.appliedRows === 0 && parsed.invalidRows.length === 0) {
+            return false;
+        }
+
+        setProfileInputs(parsed.values);
+        calculateAndApplyProfile();
+
+        if (parsed.invalidRows.length > 0) {
+            addLog(0, `⚠️ Profile paste skipped ${parsed.invalidRows.length} invalid row(s)`);
+            window.alert(`読み込めない行をスキップしました:\n${parsed.invalidRows.slice(0, 5).join('\n')}`);
+        }
+
+        return true;
+    }
+
     function renderProfileList() {
         const list = document.getElementById('profileList');
         list.innerHTML = '';
@@ -1142,6 +1271,15 @@
                     if (input.value.trim() !== '') {
                         focusNextProfileInput(index);
                     }
+                }
+            });
+            input.addEventListener('paste', (event) => {
+                const text = event.clipboardData ? event.clipboardData.getData('text') : '';
+                if (!text || (!/[\n\t,;:]/.test(text) && text.trim().split(/\s+/).length <= 1)) {
+                    return;
+                }
+                if (applyProfilePaste(text, index)) {
+                    event.preventDefault();
                 }
             });
         });

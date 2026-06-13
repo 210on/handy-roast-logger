@@ -33,12 +33,20 @@ function createLogicContext() {
         rors: [],
         referenceProfile: [],
         bottomTempIndex: null,
-        rorDisplay: { innerText: '' }
+        rorDisplay: { innerText: '' },
+        maxProfileMinute: 15,
+        getProfileInputValues: () => Array(16).fill('')
     };
 
     vm.createContext(context);
     [
+        'normalizeProfileInputs',
         'normalizeNumericText',
+        'parseProfileMinuteToken',
+        'parseProfileTemperatureToken',
+        'formatProfileTemperatureValue',
+        'parseProfilePasteLine',
+        'parseProfilePasteText',
         'parseRecognizedTemperature',
         'findPreviousValidIndex',
         'detectOutlier',
@@ -64,6 +72,28 @@ test('parseRecognizedTemperature handles Japanese decimal speech and compact fou
     assert.deepEqual(toPlainObject(logic.parseRecognizedTemperature('温度は 206 です')), { value: 206, token: '206' });
     assert.deepEqual(toPlainObject(logic.parseRecognizedTemperature('誤認識 2100')), { value: 210, token: '2100' });
     assert.equal(logic.parseRecognizedTemperature('温度わからない'), null);
+});
+
+test('parseProfilePasteText accepts temp-time, time-temp, minute-temp, and CSV export rows', () => {
+    const logic = createLogicContext();
+    const pasted = [
+        'temp,time',
+        '150 00:00',
+        '01:00,80',
+        '2,105',
+        '180,03:00,128.0,132.0',
+        '999,99:00',
+        'bad row'
+    ].join('\n');
+
+    const result = toPlainObject(logic.parseProfilePasteText(pasted, 0));
+
+    assert.equal(result.appliedRows, 4);
+    assert.deepEqual(result.invalidRows, ['999,99:00']);
+    assert.equal(result.values[0], '150');
+    assert.equal(result.values[1], '80');
+    assert.equal(result.values[2], '105');
+    assert.equal(result.values[3], '128');
 });
 
 test('detectOutlier rejects impossible values and late hard jumps', () => {
