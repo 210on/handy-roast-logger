@@ -1410,8 +1410,6 @@
     let actionLockedUntil = 0;
     let audioCtx = null;
     let beepAudio = null;
-    let hapticSwitchInput = null;
-    let hapticSwitchLabel = null;
     let audioOutputPrimed = false;
     let dataQuality = {
         rejectedOutliers: 0
@@ -1653,55 +1651,8 @@
         playOscillatorBeep();
     }
 
-    function isIOSDevice() {
-        const userAgent = navigator.userAgent || '';
-        return /iPhone|iPad|iPod/i.test(userAgent)
-            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    }
-
-    function getSafariMajorVersion() {
-        const userAgent = navigator.userAgent || '';
-        const safariMatch = userAgent.match(/Version\/(\d+)/);
-        const iosMatch = userAgent.match(/OS (\d+)[_.]/);
-        const safariVersion = safariMatch ? parseInt(safariMatch[1], 10) : null;
-        const iosVersion = iosMatch ? parseInt(iosMatch[1], 10) : null;
-        return safariVersion || iosVersion || 0;
-    }
-
-    function supportsSwitchHapticCue() {
-        return isIOSDevice() && getSafariMajorVersion() >= 18;
-    }
-
     function supportsHapticCue() {
-        return typeof navigator.vibrate === 'function' || supportsSwitchHapticCue();
-    }
-
-    function ensureSwitchHapticElements() {
-        if (hapticSwitchInput && hapticSwitchLabel) {
-            return;
-        }
-
-        const id = 'safariSwitchHapticControl';
-        hapticSwitchInput = document.createElement('input');
-        hapticSwitchInput.type = 'checkbox';
-        hapticSwitchInput.id = id;
-        hapticSwitchInput.setAttribute('switch', '');
-        hapticSwitchInput.setAttribute('aria-hidden', 'true');
-        hapticSwitchInput.tabIndex = -1;
-        hapticSwitchInput.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
-
-        hapticSwitchLabel = document.createElement('label');
-        hapticSwitchLabel.htmlFor = id;
-        hapticSwitchLabel.setAttribute('aria-hidden', 'true');
-        hapticSwitchLabel.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
-
-        document.body.appendChild(hapticSwitchInput);
-        document.body.appendChild(hapticSwitchLabel);
-    }
-
-    function triggerSwitchHapticCue() {
-        ensureSwitchHapticElements();
-        hapticSwitchLabel.click();
+        return typeof navigator.vibrate === 'function';
     }
 
     function loadCueSettings() {
@@ -1726,13 +1677,7 @@
         beepEnabledInput.checked = cueSettings.beep;
         hapticEnabledInput.checked = cueSettings.haptic && hapticSupported;
         hapticEnabledInput.disabled = !hapticSupported;
-        if (typeof navigator.vibrate === 'function') {
-            hapticSupportText.innerText = '10秒ごとの振動';
-        } else if (supportsSwitchHapticCue()) {
-            hapticSupportText.innerText = 'Safari 18+ のSwitch Hapticを試します';
-        } else {
-            hapticSupportText.innerText = 'このブラウザでは未対応';
-        }
+        hapticSupportText.innerText = hapticSupported ? '10秒ごとの振動' : 'このブラウザでは未対応';
     }
 
     function initializeCueSettings() {
@@ -1745,11 +1690,7 @@
 
     function playHapticCue() {
         if (cueSettings.haptic && supportsHapticCue()) {
-            if (typeof navigator.vibrate === 'function') {
-                navigator.vibrate([90]);
-                return;
-            }
-            triggerSwitchHapticCue();
+            navigator.vibrate([90]);
         }
     }
 
