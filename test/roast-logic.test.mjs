@@ -32,8 +32,11 @@ function createLogicContext() {
         rawTemps: [],
         temps: [],
         rors: [],
+        labels: [],
         referenceProfile: [],
         bottomTempIndex: null,
+        latestRecordedTemp: null,
+        tempDisplay: { innerText: '' },
         rorDisplay: { innerText: '' },
         maxProfileMinute: 15,
         getProfileInputValues: () => Array(16).fill('')
@@ -55,6 +58,7 @@ function createLogicContext() {
         'detectOutlier',
         'interpolateMissingData',
         'calculateRoR',
+        'rebuildInterpolatedTemps',
         'findBottomTempIndex',
         'calculateDataQuality'
     ].forEach((name) => {
@@ -140,6 +144,25 @@ test('interpolateMissingData fills skipped slots between captured readings', () 
     assert.equal(logic.temps[1], 170);
     assert.equal(logic.temps[2], 180);
     assert.equal(logic.temps[3], 190);
+});
+
+test('rebuildInterpolatedTemps refills the curve after a captured point is deleted', () => {
+    const logic = createLogicContext();
+    logic.labels.push(0, 5, 10, 15, 20);
+    logic.rawTemps[0] = 160;
+    logic.rawTemps[2] = null;
+    logic.rawTemps[4] = 220;
+    logic.temps[2] = 180;
+
+    logic.rebuildInterpolatedTemps();
+
+    assert.equal(logic.temps[0], 160);
+    assert.equal(logic.temps[1], 175);
+    assert.equal(logic.temps[2], 190);
+    assert.equal(logic.temps[3], 205);
+    assert.equal(logic.temps[4], 220);
+    assert.equal(logic.latestRecordedTemp, 220);
+    assert.equal(logic.tempDisplay.innerText, '220.0');
 });
 
 test('calculateRoR starts after bottom temperature has a rising captured point', () => {

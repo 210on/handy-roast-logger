@@ -571,6 +571,68 @@
         position: relative;
     }
 
+    .point-delete-panel {
+        position: fixed;
+        left: 50%;
+        bottom: 104px;
+        transform: translateX(-50%);
+        z-index: 1001;
+        width: min(360px, calc(100vw - 32px));
+        padding: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+        backdrop-filter: blur(10px);
+    }
+
+    .point-delete-panel[hidden] {
+        display: none;
+    }
+
+    .point-delete-title {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+
+    .point-delete-value {
+        display: block;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+    }
+
+    .point-delete-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .point-delete-actions button {
+        border: none;
+        border-radius: 12px;
+        padding: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #cancelDeletePointBtn {
+        background: #f1f5f9;
+        color: var(--text-primary);
+    }
+
+    #confirmDeletePointBtn {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
     #actionUI {
         position: fixed;
         bottom: 20px;
@@ -790,6 +852,15 @@
 
 <div id="canvas-container">
     <canvas id="roastChart"></canvas>
+</div>
+
+<div id="pointDeletePanel" class="point-delete-panel" hidden role="dialog" aria-label="Delete captured temperature point">
+    <span class="point-delete-title">Captured point</span>
+    <span class="point-delete-value" id="pointDeleteText">--:-- / --.-℃</span>
+    <div class="point-delete-actions">
+        <button id="cancelDeletePointBtn" type="button">Cancel</button>
+        <button id="confirmDeletePointBtn" type="button">Delete point</button>
+    </div>
 </div>
 
 <button id="logToggle">▼ Show Console Log</button>
@@ -1424,6 +1495,7 @@
     let roastStopSeconds = null;
     let saveInProgress = false;
     let actionLockedUntil = 0;
+    let pendingDeletePointIndex = null;
     let audioCtx = null;
     let beepAudio = null;
     let audioOutputPrimed = false;
@@ -1463,6 +1535,10 @@
     const hapticEnabledInput = document.getElementById('hapticEnabledInput');
     const hapticSupportText = document.getElementById('hapticSupportText');
     const testCueBtn = document.getElementById('testCueBtn');
+    const pointDeletePanel = document.getElementById('pointDeletePanel');
+    const pointDeleteText = document.getElementById('pointDeleteText');
+    const cancelDeletePointBtn = document.getElementById('cancelDeletePointBtn');
+    const confirmDeletePointBtn = document.getElementById('confirmDeletePointBtn');
 
     if (window['chartjs-plugin-annotation']) {
         Chart.register(window['chartjs-plugin-annotation']);
@@ -1477,13 +1553,25 @@
             labels: labels,
             datasets: [
                 { label: 'Target', data: referenceProfile, borderColor: 'rgba(100, 116, 139, 0.85)', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, yAxisID: 'y-temp', tension: 0 },
-                { label: 'Temp', data: temps, borderColor: '#e74c3c', backgroundColor: 'transparent', yAxisID: 'y-temp', tension: 0.1, borderWidth: 2, pointRadius: 2 },
+                {
+                    label: 'Temp',
+                    data: temps,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'transparent',
+                    yAxisID: 'y-temp',
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 2.5 : 0,
+                    pointHitRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 18 : 0,
+                    pointHoverRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 5 : 0
+                },
                 { label: 'RoR', data: rors, borderColor: '#3498db', backgroundColor: 'transparent', yAxisID: 'y-ror', tension: 0.4, borderWidth: 1.5, pointRadius: 0, borderDash: [2, 2] }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            onClick: handleChartClick,
             plugins: {
                 legend: { display: false },
                 annotation: { annotations: {} }
@@ -1876,11 +1964,7 @@
     function processNewData(targetTimeSec, newTemp) {
         const index = targetTimeSec / dataInterval;
         rawTemps[index] = newTemp;
-        temps[index] = newTemp;
-        latestRecordedTemp = newTemp;
-        tempDisplay.innerText = newTemp.toFixed(1);
-        interpolateMissingData(index);
-        calculateRoR();
+        rebuildInterpolatedTemps();
         updateCrackInfo();
         roastChart.update();
     }
@@ -1916,6 +2000,39 @@
 
         const latestValidRoR = rors.slice().reverse().find((value) => value !== undefined && value !== null);
         rorDisplay.innerText = latestValidRoR !== undefined ? latestValidRoR.toFixed(1) : '--.-';
+    }
+
+    function rebuildInterpolatedTemps() {
+        const nextLength = Math.max(labels.length, rawTemps.length, temps.length);
+        temps.length = nextLength;
+
+        for (let i = 0; i < nextLength; i++) {
+            const rawTemp = rawTemps[i];
+            temps[i] = rawTemp !== undefined && rawTemp !== null && Number.isFinite(rawTemp) ? rawTemp : null;
+        }
+
+        const capturedPoints = rawTemps
+            .map((temp, index) => ({ temp, index }))
+            .filter((point) => point.temp !== undefined && point.temp !== null && Number.isFinite(point.temp));
+
+        for (let pointIndex = 0; pointIndex < capturedPoints.length - 1; pointIndex++) {
+            const startPoint = capturedPoints[pointIndex];
+            const endPoint = capturedPoints[pointIndex + 1];
+            const steps = endPoint.index - startPoint.index;
+            if (steps <= 1) {
+                continue;
+            }
+
+            const stepTemp = (endPoint.temp - startPoint.temp) / steps;
+            for (let i = 1; i < steps; i++) {
+                temps[startPoint.index + i] = startPoint.temp + (stepTemp * i);
+            }
+        }
+
+        const latestPoint = capturedPoints[capturedPoints.length - 1] || null;
+        latestRecordedTemp = latestPoint ? latestPoint.temp : null;
+        tempDisplay.innerText = latestRecordedTemp !== null ? latestRecordedTemp.toFixed(1) : '---';
+        calculateRoR();
     }
 
     function findBottomTempIndex() {
@@ -1956,6 +2073,53 @@
 
     function roundToDataSlot(seconds) {
         return Math.max(0, Math.round(seconds / dataInterval) * dataInterval);
+    }
+
+    function hasCapturedTempAtIndex(index) {
+        const temp = rawTemps[index];
+        return temp !== undefined && temp !== null && Number.isFinite(temp);
+    }
+
+    function hidePointDeletePanel() {
+        pendingDeletePointIndex = null;
+        pointDeletePanel.hidden = true;
+    }
+
+    function showPointDeletePanel(index) {
+        if (!hasCapturedTempAtIndex(index)) {
+            hidePointDeletePanel();
+            return;
+        }
+
+        pendingDeletePointIndex = index;
+        const pointTime = labels[index] !== undefined ? labels[index] : index * dataInterval;
+        pointDeleteText.innerText = `${formatTime(pointTime)} / ${rawTemps[index].toFixed(1)}℃`;
+        pointDeletePanel.hidden = false;
+    }
+
+    function handleChartClick(event, elements = []) {
+        const capturedElement = elements.find((element) => element.datasetIndex === 1 && hasCapturedTempAtIndex(element.index));
+        if (!capturedElement) {
+            hidePointDeletePanel();
+            return;
+        }
+
+        showPointDeletePanel(capturedElement.index);
+    }
+
+    function deleteCapturedPoint(index) {
+        if (!hasCapturedTempAtIndex(index)) {
+            return false;
+        }
+
+        const deletedTemp = rawTemps[index];
+        const pointTime = labels[index] !== undefined ? labels[index] : index * dataInterval;
+        rawTemps[index] = null;
+        rebuildInterpolatedTemps();
+        updateCrackInfo();
+        roastChart.update();
+        addLog(pointTime, `🧹 Deleted ${deletedTemp.toFixed(1)}℃`);
+        return true;
     }
 
     function getElapsedRoastSeconds() {
@@ -2093,6 +2257,7 @@
     }
 
     function resetChartState() {
+        hidePointDeletePanel();
         rawTemps.length = 0;
         temps.length = 0;
         rors.length = 0;
@@ -2250,6 +2415,7 @@
     }
 
     async function startRoast() {
+        hidePointDeletePanel();
         isRoasting = true;
         currentSeconds = 0;
         lastProcessedSlotIndex = -1;
@@ -2368,6 +2534,18 @@
     beepEnabledInput.addEventListener('change', saveCueSettings);
     cueIntervalInput.addEventListener('change', saveCueSettings);
     hapticEnabledInput.addEventListener('change', saveCueSettings);
+    cancelDeletePointBtn.addEventListener('click', hidePointDeletePanel);
+    confirmDeletePointBtn.addEventListener('click', () => {
+        if (pendingDeletePointIndex !== null) {
+            deleteCapturedPoint(pendingDeletePointIndex);
+        }
+        hidePointDeletePanel();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            hidePointDeletePanel();
+        }
+    });
     testCueBtn.addEventListener('click', async () => {
         await primeAudioOutput();
         await playCue();
