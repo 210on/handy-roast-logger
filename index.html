@@ -1254,6 +1254,7 @@
 
     let timerInterval = null;
     let currentSeconds = 0;
+    let lastProcessedSlotIndex = -1;
     const tickInterval = 10;
     const defaultChartMaxSeconds = 180;
     let latestTargetTime = 0;
@@ -1761,20 +1762,38 @@
         return `${Math.floor(safeSeconds / 60).toString().padStart(2, '0')}:${(safeSeconds % 60).toString().padStart(2, '0')}`;
     }
 
+    function getElapsedRoastSeconds() {
+        if (!roastStartedAt) {
+            return currentSeconds;
+        }
+        return Math.max(0, Math.floor((Date.now() - roastStartedAt.getTime()) / 1000));
+    }
+
+    function markSampleSlot(slotIndex) {
+        const slotSeconds = slotIndex * tickInterval;
+        latestTargetTime = slotSeconds;
+        if (rawTemps[slotIndex] === undefined) {
+            rawTemps[slotIndex] = null;
+            temps[slotIndex] = null;
+            rors[slotIndex] = null;
+        }
+    }
+
     function updateClock() {
+        currentSeconds = getElapsedRoastSeconds();
         timerDisplay.innerText = formatTime(currentSeconds);
         updateCrackInfo();
         updateXAxisMax(currentSeconds);
 
-        if (currentSeconds % tickInterval === 0) {
-            latestTargetTime = currentSeconds;
-            rawTemps[currentSeconds / tickInterval] = null;
-            temps[currentSeconds / tickInterval] = null;
-            rors[currentSeconds / tickInterval] = null;
+        const currentSlotIndex = Math.floor(currentSeconds / tickInterval);
+        if (currentSlotIndex > lastProcessedSlotIndex) {
+            for (let slotIndex = lastProcessedSlotIndex + 1; slotIndex <= currentSlotIndex; slotIndex++) {
+                markSampleSlot(slotIndex);
+            }
+            lastProcessedSlotIndex = currentSlotIndex;
             roastChart.update();
             void playCue();
         }
-        currentSeconds++;
     }
 
     function addLog(time, msg) {
@@ -1879,6 +1898,7 @@
         isRoasting = false;
         latestTargetTime = 0;
         currentSeconds = 0;
+        lastProcessedSlotIndex = -1;
         latestRecordedTemp = null;
         bottomTempIndex = null;
         crackSeconds = null;
@@ -1961,7 +1981,7 @@
         const greenWeight = parseWeight(greenWeightInput);
         const roastedWeight = parseWeight(roastedWeightInput);
         const weightLossPercent = updateWeightLossDisplay();
-        const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds - 1, 0);
+        const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds, 0);
         const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / tickInterval) + 1);
         const qualitySummary = calculateDataQuality(sampleCount);
 
@@ -2020,6 +2040,7 @@
     async function startRoast() {
         isRoasting = true;
         currentSeconds = 0;
+        lastProcessedSlotIndex = -1;
         crackSeconds = null;
         crackTemp = null;
         latestRecordedTemp = null;
@@ -2070,7 +2091,8 @@
     }
 
     function markCrack() {
-        crackSeconds = Math.max(currentSeconds - 1, 0);
+        currentSeconds = getElapsedRoastSeconds();
+        crackSeconds = Math.max(currentSeconds, 0);
         crackTemp = latestRecordedTemp || 0;
         roastChart.options.plugins.annotation.annotations = {
             crackLine: {
@@ -2091,10 +2113,11 @@
 
     function stopRoast() {
         isRoasting = false;
+        currentSeconds = getElapsedRoastSeconds();
         clearInterval(timerInterval);
         timerInterval = null;
         roastStoppedAt = new Date();
-        roastStopSeconds = Math.max(currentSeconds - 1, 0);
+        roastStopSeconds = Math.max(currentSeconds, 0);
         if (recognition) {
             recognition.stop();
         }
