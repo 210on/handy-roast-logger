@@ -1406,6 +1406,8 @@
     let roastStartedAt = null;
     let roastStoppedAt = null;
     let roastStopSeconds = null;
+    let saveInProgress = false;
+    let actionLockedUntil = 0;
     let audioCtx = null;
     let beepAudio = null;
     let audioOutputPrimed = false;
@@ -2019,6 +2021,20 @@
         mainActionBtn.disabled = false;
     }
 
+    function isMainActionLocked() {
+        return saveInProgress || Date.now() < actionLockedUntil;
+    }
+
+    function lockMainAction(durationMs) {
+        actionLockedUntil = Date.now() + durationMs;
+        mainActionBtn.disabled = true;
+        window.setTimeout(() => {
+            if (!isMainActionLocked()) {
+                mainActionBtn.disabled = false;
+            }
+        }, durationMs);
+    }
+
     function resetChartState() {
         rawTemps.length = 0;
         temps.length = 0;
@@ -2270,8 +2286,21 @@
     }
 
     function saveRoast() {
-        exportCSV();
-        resetUI(true);
+        if (saveInProgress) {
+            return;
+        }
+        saveInProgress = true;
+        mainActionBtn.disabled = true;
+        try {
+            exportCSV();
+            resetUI(true);
+            lockMainAction(800);
+        } catch (error) {
+            addLog(Math.max(currentSeconds, 0), '⚠️ CSV exportに失敗しました');
+            mainActionBtn.disabled = false;
+        } finally {
+            saveInProgress = false;
+        }
     }
 
     greenWeightInput.addEventListener('input', updateWeightLossDisplay);
@@ -2296,6 +2325,9 @@
     });
 
     mainActionBtn.addEventListener('click', async () => {
+        if (isMainActionLocked()) {
+            return;
+        }
         if (roastPhase === 0) {
             await startRoast();
         } else if (roastPhase === 1) {
