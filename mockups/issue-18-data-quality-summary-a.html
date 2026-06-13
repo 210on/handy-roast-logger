@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issue #18 Mock A - Compact Quality Pills</title>
+<style>
+    :root {
+        --bg: #f7f2ea;
+        --card: #fffaf2;
+        --ink: #2c1b12;
+        --muted: #7d6759;
+        --line: rgba(92, 58, 35, 0.14);
+        --good: #1f8a5b;
+        --warn: #bc6c25;
+        --bad: #b33939;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background:
+            radial-gradient(circle at 20% 10%, rgba(188, 108, 37, 0.22), transparent 30%),
+            linear-gradient(145deg, #fff8ed, var(--bg));
+        color: var(--ink);
+        font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+    }
+    main {
+        width: min(420px, calc(100vw - 28px));
+        padding: 18px;
+        border-radius: 28px;
+        background: rgba(255, 250, 242, 0.88);
+        box-shadow: 0 20px 60px rgba(58, 35, 22, 0.16);
+    }
+    .timer {
+        font-size: 64px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.08em;
+        text-align: center;
+        margin: 12px 0 18px;
+    }
+    .chart {
+        height: 180px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background:
+            linear-gradient(180deg, transparent 24%, rgba(92, 58, 35, 0.08) 25%, transparent 26%, transparent 49%, rgba(92, 58, 35, 0.08) 50%, transparent 51%, transparent 74%, rgba(92, 58, 35, 0.08) 75%, transparent 76%),
+            linear-gradient(90deg, transparent 19%, rgba(92, 58, 35, 0.08) 20%, transparent 21%, transparent 39%, rgba(92, 58, 35, 0.08) 40%, transparent 41%, transparent 59%, rgba(92, 58, 35, 0.08) 60%, transparent 61%, transparent 79%, rgba(92, 58, 35, 0.08) 80%, transparent 81%);
+        position: relative;
+        overflow: hidden;
+    }
+    .chart::before {
+        content: "";
+        position: absolute;
+        inset: 26px 18px 22px;
+        border-bottom: 5px solid #e76f51;
+        border-right: 5px solid #e76f51;
+        border-radius: 0 0 80px 0;
+        transform: skew(-16deg) rotate(-9deg);
+    }
+    .weight-card {
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--card);
+    }
+    .weights {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .field {
+        padding: 12px;
+        border-radius: 16px;
+        background: #fff;
+    }
+    .label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+    .value {
+        display: block;
+        margin-top: 4px;
+        font-size: 24px;
+        font-weight: 900;
+    }
+    .loss {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+    }
+    .loss b { font-size: 32px; }
+    .quality {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+    }
+    .quality-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+    .pills {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-top: 8px;
+    }
+    .pill {
+        padding: 8px 6px;
+        border-radius: 999px;
+        background: #fff;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--muted);
+    }
+    .pill strong {
+        display: block;
+        color: var(--ink);
+        font-size: 15px;
+    }
+    .pill.good strong { color: var(--good); }
+    .pill.warn strong { color: var(--warn); }
+    .pill.bad strong { color: var(--bad); }
+    .action {
+        width: 100%;
+        margin-top: 14px;
+        border: 0;
+        border-radius: 999px;
+        padding: 18px;
+        background: #2c1b12;
+        color: #fffaf2;
+        font-size: 18px;
+        font-weight: 900;
+    }
+</style>
+</head>
+<body>
+<main>
+    <div class="timer">10:12</div>
+    <div class="chart" aria-label="roast chart mock"></div>
+    <section class="weight-card" aria-label="post roast summary">
+        <div class="weights">
+            <div class="field">
+                <span class="label">Green Beans</span>
+                <span class="value">65.0g</span>
+            </div>
+            <div class="field">
+                <span class="label">Roasted Beans</span>
+                <span class="value">56.7g</span>
+            </div>
+        </div>
+        <div class="loss">
+            <span class="label">Weight Loss</span>
+            <b>12.8%</b>
+        </div>
+        <div class="quality">
+            <div class="quality-title">
+                <span>Data Quality</span>
+                <span>CSV included</span>
+            </div>
+            <div class="pills">
+                <div class="pill good"><strong>55</strong>captured</div>
+                <div class="pill"><strong>4</strong>interp.</div>
+                <div class="pill warn"><strong>2</strong>missed</div>
+                <div class="pill bad"><strong>3</strong>ignored</div>
+            </div>
+        </div>
+    </section>
+    <button class="action">SAVE CSV</button>
+</main>
+</body>
+</html>
