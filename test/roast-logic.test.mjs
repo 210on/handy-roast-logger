@@ -35,7 +35,12 @@ function createLogicContext() {
         bottomTempIndex: null,
         rorDisplay: { innerText: '' },
         maxProfileMinute: 15,
-        getProfileInputValues: () => Array(16).fill('')
+        getProfileInputValues: () => Array(16).fill(''),
+        navigator: {
+            userAgent: '',
+            platform: '',
+            maxTouchPoints: 0
+        }
     };
 
     vm.createContext(context);
@@ -47,6 +52,9 @@ function createLogicContext() {
         'formatProfileTemperatureValue',
         'parseProfilePasteLine',
         'parseProfilePasteText',
+        'isIOSDevice',
+        'getSafariMajorVersion',
+        'supportsSwitchHapticCue',
         'parseRecognizedTemperature',
         'findPreviousValidIndex',
         'detectOutlier',
@@ -105,6 +113,26 @@ test('detectOutlier rejects impossible values and late hard jumps', () => {
     assert.equal(logic.detectOutlier(560, 2100).reason, 'outside valid temperature range');
     assert.equal(logic.detectOutlier(550, 208).isOutlier, false);
     assert.equal(logic.detectOutlier(550, 285).isOutlier, true);
+});
+
+test('supportsSwitchHapticCue detects iPhone and touch iPad user agents', () => {
+    const logic = createLogicContext();
+
+    logic.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1';
+    assert.equal(logic.supportsSwitchHapticCue(), true);
+
+    logic.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 Version/17.6 Mobile/15E148 Safari/604.1';
+    assert.equal(logic.supportsSwitchHapticCue(), false);
+
+    logic.navigator.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15';
+    logic.navigator.platform = 'MacIntel';
+    logic.navigator.maxTouchPoints = 5;
+    assert.equal(logic.supportsSwitchHapticCue(), true);
+
+    logic.navigator.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15';
+    logic.navigator.platform = 'MacIntel';
+    logic.navigator.maxTouchPoints = 0;
+    assert.equal(logic.supportsSwitchHapticCue(), false);
 });
 
 test('interpolateMissingData fills skipped slots between captured readings', () => {
