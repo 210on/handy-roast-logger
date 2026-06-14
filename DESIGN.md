@@ -23,6 +23,19 @@ Handy Roast Logger は、データ分析ツールではなく、焙煎中に邪�
 - ユーザーへ出す警告は「次にどうすると良いか」がある場合だけにする。
 - 数字を増やすより、グラフの読みやすさと信頼感を優先する。
 
+## UI Copy Rules
+
+画面上の文章は、ラベル・ボタン・具体的な状態表示に限定する。
+
+- 実装意図、設計理由、機能説明をそのままUIに出さない。
+- 「自由入力です」「入力を速くするだけです」「CSVに保存されます」のような説明臭い補足文は置かない。
+- placeholder は入力例だけにする。説明文や仕様説明をplaceholderに入れない。
+- helper text は、ユーザーが次に取るべき行動が明確な場合だけ使う。
+- Settings内でも、基本は label / input / chip / toggle / button で成立させる。
+- 仕様や意図は README、issue、コメント、CSV schema、またはこの design guide に書く。UIに混ぜない。
+- 新しいUIを追加したら、画面に残る文言を読み直し、「AIが説明している」ような文章がないか確認する。
+- HTML mockup でも同じ基準を守る。意図説明は画面外の文章、issue コメント、README に置き、mockup の可視UIには混ぜない。
+
 ## Visual Language
 
 既存 UI に合わせ、派手な装飾や別世界のカードを追加しない。
@@ -77,7 +90,7 @@ GUI 変更は、実装前に2案の HTML mockup を作る。ただし、mockup �
 - 新しいカードを足す前に、既存カードに統合できないか検討する。
 - post-roast 画面でも、主役は roast curve と SAVE までの流れ。
 - 情報量を増やす場合は、必ず「表示しない状態」を標準にする。
-- mockup の説明には、どの issue の acceptance criteria を満たすかを書く。
+- mockup の説明には、どの issue の acceptance criteria を満たすかを書く。ただし説明文は可視UIではなく、issue コメントやREADME側に置く。
 
 ## Issue Handling
 

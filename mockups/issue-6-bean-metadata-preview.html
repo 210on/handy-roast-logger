@@ -135,12 +135,6 @@
         line-height: 1;
     }
 
-    .settings-head span {
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
-    }
-
     .tabs {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -213,13 +207,6 @@
         box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.14);
     }
 
-    .helper {
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.55;
-    }
-
     .suggestions {
         display: grid;
         gap: 10px;
@@ -252,20 +239,6 @@
 
     .chip:active {
         transform: scale(0.96);
-    }
-
-    .preview-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-top: 8px;
-        padding: 11px 12px;
-        border-radius: 14px;
-        background: #f8faf9;
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 800;
     }
 
     .save {
@@ -305,7 +278,6 @@
     <section class="settings" aria-label="settings bean preview">
         <div class="settings-head">
             <h1>Settings</h1>
-            <span>main screen stays clean</span>
         </div>
         <div class="tabs" role="tablist" aria-label="settings sections">
             <button class="tab" type="button">Profile</button>
@@ -317,9 +289,6 @@
             <div class="field">
                 <label for="beanName">Bean Name</label>
                 <input id="beanName" class="input" type="text" value="Ethiopia Chelbesa Washed" placeholder="Ethiopia Chelbesa Washed">
-                <div class="helper">
-                    形式は自由。chipは一般的な豆名の入力を少し速くするだけで、区切りや分類は強制しません。
-                </div>
             </div>
 
             <div class="suggestions" aria-label="bean name suggestions">
@@ -346,11 +315,6 @@
             <div class="field" style="margin-top: 18px;">
                 <label for="note">Note</label>
                 <textarea id="note" class="textarea" placeholder="火力強め。次回は1ハゼ後を少し短くする。">酸を残したい。1ハゼ後は短めに見る。</textarea>
-            </div>
-
-            <div class="preview-row">
-                <span>CSV metadata</span>
-                <span>bean_name / note</span>
             </div>
 
             <button class="save" type="button">Save Metadata</button>
