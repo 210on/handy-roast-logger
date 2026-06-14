@@ -437,7 +437,6 @@
         outline: 2px solid var(--text-primary);
     }
 
-    #saveProfileBtn,
     #testCueBtn {
         background-color: var(--text-primary);
         color: white;
@@ -805,16 +804,45 @@
         <h3>Settings</h3>
         <div class="settings-tabs" role="tablist" aria-label="Settings sections">
             <button class="settings-tab is-active" type="button" id="profileTabBtn" data-panel="profilePanel" role="tab" aria-selected="true">Profile</button>
-            <button class="settings-tab" type="button" id="cueTabBtn" data-panel="cuePanel" role="tab" aria-selected="false">Cue</button>
             <button class="settings-tab" type="button" id="beanTabBtn" data-panel="beanPanel" role="tab" aria-selected="false">Bean</button>
+            <button class="settings-tab" type="button" id="cueTabBtn" data-panel="cuePanel" role="tab" aria-selected="false">Cue</button>
         </div>
 
         <section id="profilePanel" class="settings-panel" role="tabpanel" aria-labelledby="profileTabBtn">
-            <p>各分の目標温度を入力（未入力は自動補間）</p>
             <div class="profile-list" id="profileList" aria-label="Profiles"></div>
             <span class="profile-hint">名前はそのまま編集。左スワイプで削除、長押しで複製。</span>
             <div class="prof-row-list" id="profileRowList"></div>
-            <button id="saveProfileBtn" type="button" aria-label="Apply and save target profile">Apply Profile</button>
+        </section>
+
+        <section id="beanPanel" class="settings-panel" role="tabpanel" aria-labelledby="beanTabBtn" hidden>
+            <div class="settings-field">
+                <label class="settings-label" for="beanNameInput">Bean Name</label>
+                <input id="beanNameInput" class="settings-input" type="text" autocomplete="off" placeholder="Ethiopia Chelbesa Washed" aria-label="Bean name">
+            </div>
+            <div class="bean-suggestion-groups" aria-label="Bean name suggestions">
+                <div class="bean-suggestion-group" aria-label="Origin suggestions">
+                    <button class="bean-chip" type="button" data-bean-suggestion="Ethiopia">Ethiopia</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Kenya">Kenya</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Tanzania">Tanzania</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Rwanda">Rwanda</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Colombia">Colombia</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Guatemala">Guatemala</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Costa Rica">Costa Rica</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Honduras">Honduras</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="El Salvador">El Salvador</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Panama">Panama</button>
+                </div>
+                <div class="bean-suggestion-group" aria-label="Process suggestions">
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Washed">Washed</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Natural">Natural</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Honey">Honey</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Anaerobic">Anaerobic</button>
+                </div>
+            </div>
+            <div class="settings-field">
+                <label class="settings-label" for="beanNoteInput">Note</label>
+                <textarea id="beanNoteInput" class="settings-textarea" placeholder="バッチナンバー / 収穫年 / 焙煎の狙い / 天気温湿度" aria-label="Roast note"></textarea>
+            </div>
         </section>
 
         <section id="cuePanel" class="settings-panel" role="tabpanel" aria-labelledby="cueTabBtn" hidden>
@@ -845,37 +873,6 @@
                 </label>
             </div>
             <button id="testCueBtn" type="button">Test Cue</button>
-        </section>
-
-        <section id="beanPanel" class="settings-panel" role="tabpanel" aria-labelledby="beanTabBtn" hidden>
-            <div class="settings-field">
-                <label class="settings-label" for="beanNameInput">Bean Name</label>
-                <input id="beanNameInput" class="settings-input" type="text" autocomplete="off" placeholder="Ethiopia Chelbesa Washed" aria-label="Bean name">
-            </div>
-            <div class="bean-suggestion-groups" aria-label="Bean name suggestions">
-                <div class="bean-suggestion-group" aria-label="Origin suggestions">
-                    <button class="bean-chip" type="button" data-bean-suggestion="Ethiopia">Ethiopia</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Kenya">Kenya</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Tanzania">Tanzania</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Rwanda">Rwanda</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Colombia">Colombia</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Guatemala">Guatemala</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Costa Rica">Costa Rica</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Honduras">Honduras</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="El Salvador">El Salvador</button>
-                    <button class="bean-chip" type="button" data-bean-suggestion="Panama">Panama</button>
-                </div>
-                <div class="bean-suggestion-group" aria-label="Process suggestions">
-                    <button class="bean-chip process" type="button" data-bean-suggestion="Washed">Washed</button>
-                    <button class="bean-chip process" type="button" data-bean-suggestion="Natural">Natural</button>
-                    <button class="bean-chip process" type="button" data-bean-suggestion="Honey">Honey</button>
-                    <button class="bean-chip process" type="button" data-bean-suggestion="Anaerobic">Anaerobic</button>
-                </div>
-            </div>
-            <div class="settings-field">
-                <label class="settings-label" for="beanNoteInput">Note</label>
-                <textarea id="beanNoteInput" class="settings-textarea" placeholder="酸を残したい。1ハゼ後は短めに見る。" aria-label="Roast note"></textarea>
-            </div>
         </section>
     </div>
 </div>
@@ -1194,7 +1191,7 @@
         }
 
         setProfileInputs(parsed.values);
-        calculateAndApplyProfile();
+        saveEditorProfile();
 
         if (parsed.invalidRows.length > 0) {
             addLog(0, `⚠️ Profile paste skipped ${parsed.invalidRows.length} invalid row(s)`);
@@ -1272,7 +1269,9 @@
             activeProfile.inputs = inputs;
         }
         saveProfileLibrary();
-        renderProfileList();
+        localStorage.setItem('roastProfileCache', JSON.stringify(inputs));
+        localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
+        calculateAndApplyProfile();
         return inputs;
     }
 
@@ -1416,7 +1415,7 @@
                 return;
             }
             const previousValue = index === 0 ? 'seed' : inputs[index - 1].value.trim();
-            row.hidden = index > 0 && previousValue === '';
+            row.hidden = index >= 11 && previousValue === '';
         });
     }
 
@@ -1438,6 +1437,7 @@
         getProfileInputs().forEach((input, index) => {
             input.addEventListener('input', () => {
                 updateProfileRowVisibility();
+                saveEditorProfile();
             });
             input.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
@@ -1475,7 +1475,7 @@
             points.sort((a, b) => a.sec - b.sec);
             const maxSec = points[points.length - 1].sec;
 
-            for (let t = 0; t <= maxSec; t += 10) {
+            for (let t = 0; t <= maxSec; t += dataInterval) {
                 let p1 = points[0];
                 let p2 = points[points.length - 1];
                 for (let i = 0; i < points.length - 1; i++) {
@@ -1534,25 +1534,102 @@
         }
     });
 
-    document.getElementById('saveProfileBtn').addEventListener('click', () => {
-        const inputsToSave = saveEditorProfile();
-        localStorage.setItem('roastProfileCache', JSON.stringify(inputsToSave));
-        localStorage.setItem('roastProfileCacheVersion', profileCacheVersion);
-        calculateAndApplyProfile();
-        document.getElementById('profileEditor').style.display = 'none';
-    });
+    const settingsPanelOrder = ['profilePanel', 'beanPanel', 'cuePanel'];
+
+    function activateSettingsPanel(panelId) {
+        if (!settingsPanelOrder.includes(panelId)) {
+            return;
+        }
+
+        document.querySelectorAll('.settings-tab').forEach((button) => {
+            const isActive = button.getAttribute('data-panel') === panelId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        document.querySelectorAll('.settings-panel').forEach((panel) => {
+            panel.hidden = panel.id !== panelId;
+        });
+    }
+
+    function shiftSettingsPanel(direction) {
+        const activeIndex = settingsPanelOrder.findIndex((panelId) => !document.getElementById(panelId).hidden);
+        const nextIndex = Math.min(settingsPanelOrder.length - 1, Math.max(0, activeIndex + direction));
+        activateSettingsPanel(settingsPanelOrder[nextIndex]);
+    }
 
     document.querySelectorAll('.settings-tab').forEach((tab) => {
         tab.addEventListener('click', () => {
-            document.querySelectorAll('.settings-tab').forEach((button) => {
-                button.classList.toggle('is-active', button === tab);
-                button.setAttribute('aria-selected', button === tab ? 'true' : 'false');
-            });
-            document.querySelectorAll('.settings-panel').forEach((panel) => {
-                panel.hidden = panel.id !== tab.getAttribute('data-panel');
-            });
+            activateSettingsPanel(tab.getAttribute('data-panel'));
         });
     });
+
+    const settingsModalContent = document.querySelector('#profileEditor .modal-content');
+    let settingsSwipeStart = null;
+
+    function startSettingsSwipe(clientX, clientY, target) {
+        if (target.closest('input, textarea, select, button, .profile-row')) {
+            settingsSwipeStart = null;
+            return;
+        }
+        settingsSwipeStart = {
+            x: clientX,
+            y: clientY
+        };
+    }
+
+    function finishSettingsSwipe(clientX, clientY) {
+        if (!settingsSwipeStart) {
+            return;
+        }
+        const deltaX = clientX - settingsSwipeStart.x;
+        const deltaY = clientY - settingsSwipeStart.y;
+        settingsSwipeStart = null;
+
+        if (Math.abs(deltaX) < 70 || Math.abs(deltaY) > 45) {
+            return;
+        }
+
+        shiftSettingsPanel(deltaX < 0 ? 1 : -1);
+    }
+
+    settingsModalContent.addEventListener('pointerdown', (event) => {
+        startSettingsSwipe(event.clientX, event.clientY, event.target);
+    });
+
+    settingsModalContent.addEventListener('pointerup', (event) => {
+        finishSettingsSwipe(event.clientX, event.clientY);
+    });
+
+    settingsModalContent.addEventListener('pointercancel', () => {
+        settingsSwipeStart = null;
+    });
+
+    settingsModalContent.addEventListener('touchstart', (event) => {
+        if (event.touches.length !== 1) {
+            settingsSwipeStart = null;
+            return;
+        }
+        const touch = event.touches[0];
+        startSettingsSwipe(touch.clientX, touch.clientY, event.target);
+    }, { passive: true });
+
+    settingsModalContent.addEventListener('touchend', (event) => {
+        if (event.changedTouches.length !== 1) {
+            settingsSwipeStart = null;
+            return;
+        }
+        const touch = event.changedTouches[0];
+        finishSettingsSwipe(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    if (!window.PointerEvent) {
+        settingsModalContent.addEventListener('mousedown', (event) => {
+            startSettingsSwipe(event.clientX, event.clientY, event.target);
+        });
+        settingsModalContent.addEventListener('mouseup', (event) => {
+            finishSettingsSwipe(event.clientX, event.clientY);
+        });
+    }
 
     document.getElementById('logToggle').addEventListener('click', function () {
         const log = document.getElementById('log');
