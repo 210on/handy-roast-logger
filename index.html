@@ -88,6 +88,7 @@
         max-height: 80vh;
         overflow-y: scroll;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        touch-action: pan-y;
     }
 
     .modal-content h3 {
@@ -1566,8 +1567,12 @@
     const settingsModalContent = document.querySelector('#profileEditor .modal-content');
     let settingsSwipeStart = null;
 
+    function shouldIgnoreSettingsSwipeTarget(target) {
+        return Boolean(target.closest('input, textarea, select, .profile-row, button:not(.settings-tab)'));
+    }
+
     function startSettingsSwipe(clientX, clientY, target) {
-        if (target.closest('input, textarea, select, button, .profile-row')) {
+        if (shouldIgnoreSettingsSwipeTarget(target)) {
             settingsSwipeStart = null;
             return;
         }
@@ -1592,37 +1597,41 @@
         shiftSettingsPanel(deltaX < 0 ? 1 : -1);
     }
 
-    settingsModalContent.addEventListener('pointerdown', (event) => {
-        startSettingsSwipe(event.clientX, event.clientY, event.target);
-    });
+    if (window.PointerEvent) {
+        settingsModalContent.addEventListener('pointerdown', (event) => {
+            startSettingsSwipe(event.clientX, event.clientY, event.target);
+        });
 
-    settingsModalContent.addEventListener('pointerup', (event) => {
-        finishSettingsSwipe(event.clientX, event.clientY);
-    });
+        settingsModalContent.addEventListener('pointerup', (event) => {
+            finishSettingsSwipe(event.clientX, event.clientY);
+        });
 
-    settingsModalContent.addEventListener('pointercancel', () => {
-        settingsSwipeStart = null;
-    });
-
-    settingsModalContent.addEventListener('touchstart', (event) => {
-        if (event.touches.length !== 1) {
+        settingsModalContent.addEventListener('pointercancel', () => {
             settingsSwipeStart = null;
-            return;
-        }
-        const touch = event.touches[0];
-        startSettingsSwipe(touch.clientX, touch.clientY, event.target);
-    }, { passive: true });
+        });
+    } else {
+        settingsModalContent.addEventListener('touchstart', (event) => {
+            if (event.touches.length !== 1) {
+                settingsSwipeStart = null;
+                return;
+            }
+            const touch = event.touches[0];
+            startSettingsSwipe(touch.clientX, touch.clientY, event.target);
+        }, { passive: true });
 
-    settingsModalContent.addEventListener('touchend', (event) => {
-        if (event.changedTouches.length !== 1) {
+        settingsModalContent.addEventListener('touchend', (event) => {
+            if (event.changedTouches.length !== 1) {
+                settingsSwipeStart = null;
+                return;
+            }
+            const touch = event.changedTouches[0];
+            finishSettingsSwipe(touch.clientX, touch.clientY);
+        }, { passive: true });
+
+        settingsModalContent.addEventListener('touchcancel', () => {
             settingsSwipeStart = null;
-            return;
-        }
-        const touch = event.changedTouches[0];
-        finishSettingsSwipe(touch.clientX, touch.clientY);
-    }, { passive: true });
+        });
 
-    if (!window.PointerEvent) {
         settingsModalContent.addEventListener('mousedown', (event) => {
             startSettingsSwipe(event.clientX, event.clientY, event.target);
         });
