@@ -104,7 +104,7 @@
 
     .settings-tabs {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 6px;
         background: #edf2f7;
         border-radius: 12px;
@@ -254,6 +254,7 @@
     }
 
     .settings-input,
+    .settings-textarea,
     .settings-select {
         border: none;
         background: #edf2f7;
@@ -265,14 +266,52 @@
         width: 100%;
     }
 
+    .settings-textarea {
+        min-height: 88px;
+        line-height: 1.45;
+        resize: vertical;
+    }
+
     .settings-row .settings-select {
         width: 96px;
         flex: 0 0 auto;
     }
 
     .settings-input:focus,
+    .settings-textarea:focus,
     .settings-select:focus {
         outline: 2px solid var(--text-primary);
+    }
+
+    .bean-suggestion-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 2px 0 16px;
+    }
+
+    .bean-suggestion-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .bean-chip {
+        border: 1px solid #d9e2ec;
+        border-radius: 999px;
+        background: #f8fafc;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 7px 10px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .bean-chip.process {
+        background: #eefaf3;
+        border-color: #c9efd8;
+        color: #1f7a45;
     }
 
     .settings-row {
@@ -767,6 +806,7 @@
         <div class="settings-tabs" role="tablist" aria-label="Settings sections">
             <button class="settings-tab is-active" type="button" id="profileTabBtn" data-panel="profilePanel" role="tab" aria-selected="true">Profile</button>
             <button class="settings-tab" type="button" id="cueTabBtn" data-panel="cuePanel" role="tab" aria-selected="false">Cue</button>
+            <button class="settings-tab" type="button" id="beanTabBtn" data-panel="beanPanel" role="tab" aria-selected="false">Bean</button>
         </div>
 
         <section id="profilePanel" class="settings-panel" role="tabpanel" aria-labelledby="profileTabBtn">
@@ -805,6 +845,39 @@
                 </label>
             </div>
             <button id="testCueBtn" type="button">Test Cue</button>
+        </section>
+
+        <section id="beanPanel" class="settings-panel" role="tabpanel" aria-labelledby="beanTabBtn" hidden>
+            <div class="settings-field">
+                <label class="settings-label" for="beanNameInput">Bean Name</label>
+                <input id="beanNameInput" class="settings-input" type="text" autocomplete="off" placeholder="Ethiopia Chelbesa Washed" aria-label="Bean name">
+                <span class="profile-hint">自由入力。chipは一般的な豆名の入力を少し速くするだけです。</span>
+            </div>
+            <div class="bean-suggestion-groups" aria-label="Bean name suggestions">
+                <div class="bean-suggestion-group" aria-label="Origin suggestions">
+                    <button class="bean-chip" type="button" data-bean-suggestion="Ethiopia">Ethiopia</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Kenya">Kenya</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Tanzania">Tanzania</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Rwanda">Rwanda</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Colombia">Colombia</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Guatemala">Guatemala</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Costa Rica">Costa Rica</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Honduras">Honduras</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="El Salvador">El Salvador</button>
+                    <button class="bean-chip" type="button" data-bean-suggestion="Panama">Panama</button>
+                </div>
+                <div class="bean-suggestion-group" aria-label="Process suggestions">
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Washed">Washed</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Natural">Natural</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Honey">Honey</button>
+                    <button class="bean-chip process" type="button" data-bean-suggestion="Anaerobic">Anaerobic</button>
+                </div>
+            </div>
+            <div class="settings-field">
+                <label class="settings-label" for="beanNoteInput">Note</label>
+                <textarea id="beanNoteInput" class="settings-textarea" placeholder="酸を残したい。1ハゼ後は短めに見る。" aria-label="Roast note"></textarea>
+                <span class="profile-hint">Bean Name と Note はCSVのmetadataに保存されます。</span>
+            </div>
         </section>
     </div>
 </div>
@@ -890,6 +963,7 @@
     const profileLibraryKey = 'roastProfileLibrary';
     const profileLibraryVersionKey = 'roastProfileLibraryVersion';
     const activeProfileKey = 'activeRoastProfileId';
+    const beanMetadataKey = 'roastBeanMetadata';
     const defaultProfileInputs = ['150', '80', '105', '128', '149', '167', '182', '194', '202', '206', '209', '', '', '', '', ''];
     const maxProfileMinute = 15;
     let profileLibrary = [];
@@ -930,6 +1004,22 @@
         } catch (error) {
             return null;
         }
+    }
+
+    function appendUniqueSuggestion(currentValue, suggestion) {
+        const value = String(currentValue || '').replace(/\s+/g, ' ').trim();
+        const token = String(suggestion || '').replace(/\s+/g, ' ').trim();
+        if (!token) {
+            return value;
+        }
+
+        const valueLower = value.toLowerCase();
+        const tokenLower = token.toLowerCase();
+        if (valueLower.split(/\s+/).join(' ').includes(tokenLower)) {
+            return value;
+        }
+
+        return value ? `${value} ${token}` : token;
     }
 
     function escapeHtml(value) {
@@ -1430,6 +1520,7 @@
         attachProfileInputBehavior();
         loadActiveProfileIntoEditor();
         initializeCueSettings();
+        initializeBeanMetadata();
         if (getProfileInputValues().some((value) => value !== '')) {
             calculateAndApplyProfile();
         }
@@ -1535,6 +1626,9 @@
     const hapticEnabledInput = document.getElementById('hapticEnabledInput');
     const hapticSupportText = document.getElementById('hapticSupportText');
     const testCueBtn = document.getElementById('testCueBtn');
+    const beanNameInput = document.getElementById('beanNameInput');
+    const beanNoteInput = document.getElementById('beanNoteInput');
+    const beanSuggestionButtons = Array.from(document.querySelectorAll('[data-bean-suggestion]'));
     const pointDeletePanel = document.getElementById('pointDeletePanel');
     const pointDeleteText = document.getElementById('pointDeleteText');
     const cancelDeletePointBtn = document.getElementById('cancelDeletePointBtn');
@@ -1823,6 +1917,32 @@
             cueSettings.haptic = false;
         }
         applyCueSettingsToUI();
+    }
+
+    function getBeanMetadata() {
+        return {
+            beanName: beanNameInput.value.trim(),
+            note: beanNoteInput.value.trim()
+        };
+    }
+
+    function saveBeanMetadata() {
+        localStorage.setItem(beanMetadataKey, JSON.stringify(getBeanMetadata()));
+    }
+
+    function initializeBeanMetadata() {
+        const savedMetadata = readJsonStorage(beanMetadataKey) || {};
+        beanNameInput.value = savedMetadata.beanName || '';
+        beanNoteInput.value = savedMetadata.note || '';
+    }
+
+    function applyBeanSuggestion(suggestion) {
+        const nextValue = appendUniqueSuggestion(beanNameInput.value, suggestion);
+        if (nextValue !== beanNameInput.value) {
+            beanNameInput.value = nextValue;
+            saveBeanMetadata();
+        }
+        beanNameInput.focus();
     }
 
     function playHapticCue() {
@@ -2361,12 +2481,15 @@
         const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds, 0);
         const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / dataInterval) + 1);
         const qualitySummary = calculateDataQuality(sampleCount);
+        const beanMetadata = getBeanMetadata();
 
         const rows = [
             ['item', 'value'],
             ['exported_at', exportedAt.toISOString()],
             ['roast_started_at', roastStartedAt ? roastStartedAt.toISOString() : ''],
             ['roast_stopped_at', roastStoppedAt ? roastStoppedAt.toISOString() : ''],
+            ['bean_name', beanMetadata.beanName],
+            ['note', beanMetadata.note],
             ['roast_duration_sec', durationSeconds],
             ['roast_duration', formatTime(durationSeconds)],
             ['bottom_time_sec', bottomTempIndex !== null ? labels[bottomTempIndex] : ''],
@@ -2534,6 +2657,13 @@
     beepEnabledInput.addEventListener('change', saveCueSettings);
     cueIntervalInput.addEventListener('change', saveCueSettings);
     hapticEnabledInput.addEventListener('change', saveCueSettings);
+    beanNameInput.addEventListener('input', saveBeanMetadata);
+    beanNoteInput.addEventListener('input', saveBeanMetadata);
+    beanSuggestionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            applyBeanSuggestion(button.getAttribute('data-bean-suggestion'));
+        });
+    });
     cancelDeletePointBtn.addEventListener('click', hidePointDeletePanel);
     confirmDeletePointBtn.addEventListener('click', () => {
         if (pendingDeletePointIndex !== null) {

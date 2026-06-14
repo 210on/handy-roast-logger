@@ -51,6 +51,7 @@ function createLogicContext() {
         'formatProfileTemperatureValue',
         'parseProfilePasteLine',
         'parseProfilePasteText',
+        'appendUniqueSuggestion',
         'normalizeCueInterval',
         'roundToDataSlot',
         'parseRecognizedTemperature',
@@ -101,6 +102,16 @@ test('parseProfilePasteText accepts temp-time, time-temp, minute-temp, and CSV e
     assert.equal(result.values[1], '80');
     assert.equal(result.values[2], '105');
     assert.equal(result.values[3], '128');
+});
+
+test('appendUniqueSuggestion helps bean name input without forcing structure', () => {
+    const logic = createLogicContext();
+
+    assert.equal(logic.appendUniqueSuggestion('', 'Ethiopia'), 'Ethiopia');
+    assert.equal(logic.appendUniqueSuggestion('Ethiopia Chelbesa', 'Washed'), 'Ethiopia Chelbesa Washed');
+    assert.equal(logic.appendUniqueSuggestion('Ethiopia Chelbesa Washed', 'Washed'), 'Ethiopia Chelbesa Washed');
+    assert.equal(logic.appendUniqueSuggestion('Colombia Anaerobic', 'Natural'), 'Colombia Anaerobic Natural');
+    assert.equal(logic.appendUniqueSuggestion('Costa Rica', 'Costa Rica'), 'Costa Rica');
 });
 
 test('detectOutlier rejects impossible values and late hard jumps', () => {
