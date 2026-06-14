@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issue #6 Preview - Bean Metadata</title>
+<style>
+    :root {
+        --bg-main: #f4f7f6;
+        --surface: #ffffff;
+        --surface-soft: #f8faf9;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --line: #edf2f1;
+        --accent-green: #2ecc71;
+        --accent-blue: #34495e;
+        --shadow: 0 8px 24px rgba(44, 62, 80, 0.08);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background:
+            radial-gradient(circle at top left, rgba(46, 204, 113, 0.10), transparent 34%),
+            linear-gradient(180deg, #fbfdfc, var(--bg-main));
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    }
+
+    main {
+        width: min(420px, 100%);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 22px 70px rgba(44, 62, 80, 0.16);
+        overflow: hidden;
+    }
+
+    .app-top {
+        padding: 18px 18px 10px;
+        background: linear-gradient(180deg, #ffffff, #f7fbf9);
+    }
+
+    .timer {
+        text-align: center;
+        font-size: 58px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.08em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .stat-box {
+        padding: 10px 8px;
+        border-radius: 16px;
+        background: var(--surface);
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(44, 62, 80, 0.04);
+    }
+
+    .stat-label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        display: block;
+        margin-top: 4px;
+        font-size: 22px;
+        font-weight: 900;
+    }
+
+    .chart {
+        height: 180px;
+        margin: 14px 18px 18px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background:
+            repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(127, 140, 141, 0.08) 36px),
+            repeating-linear-gradient(90deg, transparent, transparent 55px, rgba(127, 140, 141, 0.08) 56px),
+            #ffffff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .chart::before {
+        content: "";
+        position: absolute;
+        left: 28px;
+        right: 28px;
+        bottom: 52px;
+        height: 78px;
+        border-top: 4px solid #e74c3c;
+        border-radius: 70% 30% 0 0;
+        transform: rotate(-8deg);
+    }
+
+    .settings {
+        margin: 0 12px 12px;
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .settings-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .settings-head h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .settings-head span {
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 8px;
+        background: var(--surface-soft);
+    }
+
+    .tab {
+        border: 0;
+        border-radius: 999px;
+        padding: 9px 10px;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 800;
+    }
+
+    .tab.active {
+        background: var(--surface);
+        color: var(--text-primary);
+        box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+    }
+
+    .panel {
+        padding: 16px;
+    }
+
+    .field {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    label {
+        font-size: 12px;
+        font-weight: 900;
+        color: var(--text-secondary);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .input,
+    .textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fbfdfc;
+        color: var(--text-primary);
+        font: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        outline: none;
+    }
+
+    .input {
+        height: 48px;
+        padding: 0 14px;
+    }
+
+    .textarea {
+        min-height: 92px;
+        padding: 13px 14px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+    .input:focus,
+    .textarea:focus {
+        border-color: rgba(46, 204, 113, 0.75);
+        box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.14);
+    }
+
+    .helper {
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.55;
+    }
+
+    .suggestions {
+        display: grid;
+        gap: 10px;
+        margin-top: 2px;
+    }
+
+    .suggestion-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    .chip {
+        border: 1px solid rgba(44, 62, 80, 0.10);
+        border-radius: 999px;
+        padding: 8px 11px;
+        background: #f7faf9;
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .chip.process {
+        background: rgba(46, 204, 113, 0.10);
+        border-color: rgba(46, 204, 113, 0.20);
+        color: #227a48;
+    }
+
+    .chip:active {
+        transform: scale(0.96);
+    }
+
+    .preview-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 8px;
+        padding: 11px 12px;
+        border-radius: 14px;
+        background: #f8faf9;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .save {
+        width: 100%;
+        border: 0;
+        border-radius: 16px;
+        padding: 15px;
+        background: var(--accent-blue);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 900;
+    }
+</style>
+</head>
+<body>
+<main>
+    <div class="app-top">
+        <div class="timer">07:42</div>
+        <div class="stats" aria-hidden="true">
+            <div class="stat-box">
+                <span class="stat-label">Temp</span>
+                <span class="stat-value">198.6</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Target</span>
+                <span class="stat-value">199.3</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">RoR</span>
+                <span class="stat-value">7.5</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart" aria-label="roast curve mock"></div>
+
+    <section class="settings" aria-label="settings bean preview">
+        <div class="settings-head">
+            <h1>Settings</h1>
+            <span>main screen stays clean</span>
+        </div>
+        <div class="tabs" role="tablist" aria-label="settings sections">
+            <button class="tab" type="button">Profile</button>
+            <button class="tab" type="button">Cue</button>
+            <button class="tab active" type="button">Bean</button>
+        </div>
+
+        <div class="panel">
+            <div class="field">
+                <label for="beanName">Bean Name</label>
+                <input id="beanName" class="input" type="text" value="Ethiopia Chelbesa Washed" placeholder="Ethiopia Chelbesa Washed">
+                <div class="helper">
+                    形式は自由。chipは一般的な豆名の入力を少し速くするだけで、区切りや分類は強制しません。
+                </div>
+            </div>
+
+            <div class="suggestions" aria-label="bean name suggestions">
+                <div class="suggestion-group" aria-label="origin suggestions">
+                    <button class="chip" type="button">Ethiopia</button>
+                    <button class="chip" type="button">Kenya</button>
+                    <button class="chip" type="button">Tanzania</button>
+                    <button class="chip" type="button">Rwanda</button>
+                    <button class="chip" type="button">Colombia</button>
+                    <button class="chip" type="button">Guatemala</button>
+                    <button class="chip" type="button">Costa Rica</button>
+                    <button class="chip" type="button">Honduras</button>
+                    <button class="chip" type="button">El Salvador</button>
+                    <button class="chip" type="button">Panama</button>
+                </div>
+                <div class="suggestion-group" aria-label="process suggestions">
+                    <button class="chip process" type="button">Washed</button>
+                    <button class="chip process" type="button">Natural</button>
+                    <button class="chip process" type="button">Honey</button>
+                    <button class="chip process" type="button">Anaerobic</button>
+                </div>
+            </div>
+
+            <div class="field" style="margin-top: 18px;">
+                <label for="note">Note</label>
+                <textarea id="note" class="textarea" placeholder="火力強め。次回は1ハゼ後を少し短くする。">酸を残したい。1ハゼ後は短めに見る。</textarea>
+            </div>
+
+            <div class="preview-row">
+                <span>CSV metadata</span>
+                <span>bean_name / note</span>
+            </div>
+
+            <button class="save" type="button">Save Metadata</button>
+        </div>
+    </section>
+</main>
+
+<script>
+    const beanInput = document.getElementById('beanName');
+    document.querySelectorAll('.chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            const token = chip.textContent.trim();
+            const current = beanInput.value.trim();
+            const words = current.toLowerCase().split(/\s+/);
+
+            if (words.includes(token.toLowerCase())) {
+                beanInput.focus();
+                return;
+            }
+
+            beanInput.value = current ? `${current} ${token}` : token;
+            beanInput.focus();
+        });
+    });
+</script>
+</body>
+</html>
