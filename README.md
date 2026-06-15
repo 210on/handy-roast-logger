@@ -99,6 +99,7 @@ https://210on.github.io/handy-roast-logger/
 * **HTML5 / CSS3 / Vanilla JavaScript** (フレームワーク非依存)
 * **Chart.js** (v3+) - グラフ描画
 * **chartjs-plugin-annotation** - 1ハゼの垂直線描画
+* **Hammer.js** - Settings と Profile のモバイルジェスチャー
 * **Web Speech API** - 音声認識
 * **Web Audio API** - ビープ音生成
 * **Vibration API** - 振動キュー（対応ブラウザのみ）
