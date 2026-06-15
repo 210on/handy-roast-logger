@@ -111,6 +111,31 @@
         border-radius: 12px;
         padding: 4px;
         margin-bottom: 18px;
+        overflow: hidden;
+        position: relative;
+        touch-action: pan-y;
+        --settings-indicator-left: 4px;
+        --settings-indicator-width: calc((100% - 20px) / 3);
+    }
+
+    .settings-tab-indicator {
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        left: 0;
+        width: var(--settings-indicator-width);
+        border-radius: 9px;
+        background: var(--surface);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 6px 18px rgba(15, 23, 42, 0.08);
+        pointer-events: none;
+        transform: translateX(var(--settings-indicator-left));
+        transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+        will-change: transform, width;
+        z-index: 0;
+    }
+
+    .settings-tabs.is-dragging .settings-tab-indicator {
+        transition: none;
     }
 
     .settings-tab {
@@ -122,12 +147,13 @@
         font-weight: 700;
         padding: 9px 10px;
         cursor: pointer;
+        position: relative;
+        transition: color 0.18s ease;
+        z-index: 1;
     }
 
     .settings-tab.is-active {
-        background: var(--surface);
         color: var(--text-primary);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     }
 
     .settings-panel[hidden] {
@@ -804,6 +830,7 @@
     <div class="modal-content">
         <h3>Settings</h3>
         <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+            <span class="settings-tab-indicator" aria-hidden="true"></span>
             <button class="settings-tab is-active" type="button" id="profileTabBtn" data-panel="profilePanel" role="tab" aria-selected="true">Profile</button>
             <button class="settings-tab" type="button" id="beanTabBtn" data-panel="beanPanel" role="tab" aria-selected="false">Bean</button>
             <button class="settings-tab" type="button" id="cueTabBtn" data-panel="cuePanel" role="tab" aria-selected="false">Cue</button>
@@ -1525,17 +1552,42 @@
         }
     });
 
-    document.getElementById('profileToggleBtn').addEventListener('click', () => {
-        document.getElementById('profileEditor').style.display = 'block';
-    });
-
-    document.getElementById('profileEditor').addEventListener('click', (event) => {
-        if (event.target.id === 'profileEditor') {
-            event.target.style.display = 'none';
-        }
-    });
-
     const settingsPanelOrder = ['profilePanel', 'beanPanel', 'cuePanel'];
+    const settingsTabs = document.querySelector('.settings-tabs');
+    const settingsTabIndicator = document.querySelector('.settings-tab-indicator');
+
+    function getActiveSettingsPanelIndex() {
+        const activeIndex = settingsPanelOrder.findIndex((panelId) => !document.getElementById(panelId).hidden);
+        return activeIndex === -1 ? 0 : activeIndex;
+    }
+
+    function getSettingsTabMetrics(index) {
+        const tab = settingsTabs.querySelector(`[data-panel="${settingsPanelOrder[index]}"]`);
+        if (!tab || tab.offsetWidth === 0) {
+            return null;
+        }
+        return {
+            left: tab.offsetLeft,
+            width: tab.offsetWidth
+        };
+    }
+
+    function moveSettingsIndicator(left, width, isDragging = false) {
+        if (!settingsTabIndicator) {
+            return;
+        }
+        settingsTabs.classList.toggle('is-dragging', isDragging);
+        settingsTabs.style.setProperty('--settings-indicator-left', `${left}px`);
+        settingsTabs.style.setProperty('--settings-indicator-width', `${width}px`);
+    }
+
+    function syncSettingsIndicator(index = getActiveSettingsPanelIndex()) {
+        const metrics = getSettingsTabMetrics(index);
+        if (!metrics) {
+            return;
+        }
+        moveSettingsIndicator(metrics.left, metrics.width);
+    }
 
     function activateSettingsPanel(panelId) {
         if (!settingsPanelOrder.includes(panelId)) {
@@ -1550,12 +1602,7 @@
         document.querySelectorAll('.settings-panel').forEach((panel) => {
             panel.hidden = panel.id !== panelId;
         });
-    }
-
-    function shiftSettingsPanel(direction) {
-        const activeIndex = settingsPanelOrder.findIndex((panelId) => !document.getElementById(panelId).hidden);
-        const nextIndex = Math.min(settingsPanelOrder.length - 1, Math.max(0, activeIndex + direction));
-        activateSettingsPanel(settingsPanelOrder[nextIndex]);
+        syncSettingsIndicator(settingsPanelOrder.indexOf(panelId));
     }
 
     document.querySelectorAll('.settings-tab').forEach((tab) => {
@@ -1578,8 +1625,35 @@
         }
         settingsSwipeStart = {
             x: clientX,
-            y: clientY
+            y: clientY,
+            index: getActiveSettingsPanelIndex()
         };
+    }
+
+    function updateSettingsSwipe(clientX, clientY) {
+        if (!settingsSwipeStart) {
+            return;
+        }
+        const deltaX = clientX - settingsSwipeStart.x;
+        const deltaY = clientY - settingsSwipeStart.y;
+        if (Math.abs(deltaY) > Math.abs(deltaX) || Math.abs(deltaX) < 8) {
+            return;
+        }
+
+        const startIndex = settingsSwipeStart.index;
+        const direction = deltaX < 0 ? 1 : -1;
+        const targetIndex = Math.min(settingsPanelOrder.length - 1, Math.max(0, startIndex + direction));
+        const startMetrics = getSettingsTabMetrics(startIndex);
+        const targetMetrics = getSettingsTabMetrics(targetIndex);
+        if (!startMetrics || !targetMetrics) {
+            return;
+        }
+
+        const progress = Math.min(Math.abs(deltaX) / Math.max(startMetrics.width * 0.9, 1), 1);
+        const dampedProgress = targetIndex === startIndex ? progress * 0.18 : progress;
+        const left = startMetrics.left + (targetMetrics.left - startMetrics.left) * dampedProgress;
+        const width = startMetrics.width + (targetMetrics.width - startMetrics.width) * dampedProgress;
+        moveSettingsIndicator(left, width, true);
     }
 
     function finishSettingsSwipe(clientX, clientY) {
@@ -1588,18 +1662,27 @@
         }
         const deltaX = clientX - settingsSwipeStart.x;
         const deltaY = clientY - settingsSwipeStart.y;
+        const startIndex = settingsSwipeStart.index;
         settingsSwipeStart = null;
+        settingsTabs.classList.remove('is-dragging');
 
         if (Math.abs(deltaX) < 70 || Math.abs(deltaY) > 45) {
+            syncSettingsIndicator(startIndex);
             return;
         }
 
-        shiftSettingsPanel(deltaX < 0 ? 1 : -1);
+        const direction = deltaX < 0 ? 1 : -1;
+        const nextIndex = Math.min(settingsPanelOrder.length - 1, Math.max(0, startIndex + direction));
+        activateSettingsPanel(settingsPanelOrder[nextIndex]);
     }
 
     if (window.PointerEvent) {
         settingsModalContent.addEventListener('pointerdown', (event) => {
             startSettingsSwipe(event.clientX, event.clientY, event.target);
+        });
+
+        settingsModalContent.addEventListener('pointermove', (event) => {
+            updateSettingsSwipe(event.clientX, event.clientY);
         });
 
         settingsModalContent.addEventListener('pointerup', (event) => {
@@ -1608,6 +1691,8 @@
 
         settingsModalContent.addEventListener('pointercancel', () => {
             settingsSwipeStart = null;
+            settingsTabs.classList.remove('is-dragging');
+            syncSettingsIndicator();
         });
     } else {
         settingsModalContent.addEventListener('touchstart', (event) => {
@@ -1619,9 +1704,19 @@
             startSettingsSwipe(touch.clientX, touch.clientY, event.target);
         }, { passive: true });
 
+        settingsModalContent.addEventListener('touchmove', (event) => {
+            if (event.touches.length !== 1) {
+                return;
+            }
+            const touch = event.touches[0];
+            updateSettingsSwipe(touch.clientX, touch.clientY);
+        }, { passive: true });
+
         settingsModalContent.addEventListener('touchend', (event) => {
             if (event.changedTouches.length !== 1) {
                 settingsSwipeStart = null;
+                settingsTabs.classList.remove('is-dragging');
+                syncSettingsIndicator();
                 return;
             }
             const touch = event.changedTouches[0];
@@ -1630,15 +1725,31 @@
 
         settingsModalContent.addEventListener('touchcancel', () => {
             settingsSwipeStart = null;
+            settingsTabs.classList.remove('is-dragging');
+            syncSettingsIndicator();
         });
 
         settingsModalContent.addEventListener('mousedown', (event) => {
             startSettingsSwipe(event.clientX, event.clientY, event.target);
         });
+        settingsModalContent.addEventListener('mousemove', (event) => {
+            updateSettingsSwipe(event.clientX, event.clientY);
+        });
         settingsModalContent.addEventListener('mouseup', (event) => {
             finishSettingsSwipe(event.clientX, event.clientY);
         });
     }
+
+    document.getElementById('profileToggleBtn').addEventListener('click', () => {
+        document.getElementById('profileEditor').style.display = 'block';
+        requestAnimationFrame(() => syncSettingsIndicator());
+    });
+
+    document.getElementById('profileEditor').addEventListener('click', (event) => {
+        if (event.target.id === 'profileEditor') {
+            event.target.style.display = 'none';
+        }
+    });
 
     document.getElementById('logToggle').addEventListener('click', function () {
         const log = document.getElementById('log');
