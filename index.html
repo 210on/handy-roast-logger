@@ -11,847 +11,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1"></script>
 <script src="vendor/hammer.min.js"></script>
-<style>
-    :root {
-        --bg-main: #f8f9fa;
-        --surface: #ffffff;
-        --text-primary: #212529;
-        --text-secondary: #6c757d;
-        --accent-green: #2cbd6d;
-        --accent-orange: #e67e22;
-        --accent-red: #e74c3c;
-        --accent-save: #34495e;
-        --chart-temp: #e74c3c;
-        --chart-ror: #3498db;
-    }
-
-    * {
-        box-sizing: border-box;
-        -webkit-font-smoothing: antialiased;
-    }
-
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        margin: 0;
-        padding: 16px;
-        padding-bottom: 120px;
-        background-color: var(--bg-main);
-        color: var(--text-primary);
-    }
-
-    header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-    }
-
-    h1 {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0;
-        letter-spacing: -0.02em;
-        color: var(--text-secondary);
-    }
-
-    #profileToggleBtn {
-        background: transparent;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 0.85rem;
-        font-weight: 500;
-        cursor: pointer;
-        padding: 8px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    #profileEditor {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.4);
-        z-index: 10000;
-        backdrop-filter: blur(4px);
-    }
-
-    .modal-content {
-        background: var(--surface);
-        margin: 40px auto;
-        width: 90%;
-        max-width: 360px;
-        border-radius: 16px;
-        padding: 24px;
-        max-height: 80vh;
-        overflow-y: scroll;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        touch-action: pan-y;
-    }
-
-    .modal-content h3 {
-        margin: 0 0 8px 0;
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .modal-content p {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        margin: 0 0 16px 0;
-    }
-
-    .settings-tabs {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-        background: #edf2f7;
-        border-radius: 12px;
-        padding: 4px;
-        margin-bottom: 18px;
-        overflow: hidden;
-        position: relative;
-        touch-action: pan-y;
-        --settings-indicator-left: 4px;
-        --settings-indicator-width: calc((100% - 20px) / 3);
-    }
-
-    .settings-tab-indicator {
-        position: absolute;
-        top: 4px;
-        bottom: 4px;
-        left: 0;
-        width: var(--settings-indicator-width);
-        border-radius: 9px;
-        background: var(--surface);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 6px 18px rgba(15, 23, 42, 0.08);
-        pointer-events: none;
-        transform: translateX(var(--settings-indicator-left));
-        transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
-        will-change: transform, width;
-        z-index: 0;
-    }
-
-    .settings-tabs.is-dragging .settings-tab-indicator {
-        transition: none;
-    }
-
-    .settings-tab {
-        border: none;
-        border-radius: 9px;
-        background: transparent;
-        color: var(--text-secondary);
-        font-size: 0.82rem;
-        font-weight: 700;
-        padding: 9px 10px;
-        cursor: pointer;
-        position: relative;
-        transition: color 0.18s ease;
-        z-index: 1;
-    }
-
-    .settings-tab.is-active {
-        color: var(--text-primary);
-    }
-
-    .settings-panel[hidden] {
-        display: none;
-    }
-
-    .settings-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 18px;
-    }
-
-    .profile-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 18px;
-    }
-
-    .profile-row {
-        position: relative;
-        overflow: hidden;
-        border-radius: 12px;
-        background: #edf2f7;
-        max-height: 58px;
-        opacity: 1;
-        transform: translateX(0);
-        transition: max-height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease, margin 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-        --profile-row-offset: 0px;
-        --profile-delete-opacity: 0;
-    }
-
-    .profile-row-body {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 46px;
-        padding: 6px 10px;
-        background: #edf2f7;
-        position: relative;
-        z-index: 1;
-        transform: translateX(var(--profile-row-offset));
-        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.18s ease;
-        touch-action: pan-y;
-        will-change: transform;
-    }
-
-    .profile-row.is-swiping .profile-row-body {
-        transition: none;
-    }
-
-    .profile-row.is-active .profile-row-body {
-        background: #dbeafe;
-    }
-
-    .profile-row.is-delete-open .profile-row-body {
-        --profile-row-offset: -58px;
-    }
-
-    .profile-row.is-deleting {
-        max-height: 0;
-        margin-top: -8px;
-        opacity: 0;
-        transform: translateX(-24px);
-    }
-
-    .profile-row.is-deleting .profile-row-body {
-        transform: translateX(-100%);
-    }
-
-    .profile-name {
-        width: 100%;
-        border: none;
-        background: transparent;
-        color: var(--text-primary);
-        font-size: 0.94rem;
-        font-weight: 700;
-        min-width: 0;
-        padding: 8px 2px;
-    }
-
-    .profile-name:focus {
-        outline: none;
-    }
-
-    .profile-row.is-active .profile-name {
-        color: #0f172a;
-    }
-
-    .profile-delete-btn {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 58px;
-        height: 100%;
-        border: none;
-        background: var(--accent-red);
-        color: white;
-        font-size: 1.15rem;
-        font-weight: 800;
-        cursor: pointer;
-        opacity: var(--profile-delete-opacity);
-        pointer-events: none;
-        visibility: hidden;
-        transform: scale(0.96);
-        transition: opacity 0.22s ease, transform 0.22s ease;
-    }
-
-    .profile-row.is-delete-open .profile-delete-btn {
-        --profile-delete-opacity: 1;
-        pointer-events: auto;
-        visibility: visible;
-        transform: scale(1);
-    }
-
-    .profile-row.is-swiping .profile-delete-btn {
-        visibility: visible;
-        transition: none;
-    }
-
-    .profile-create-btn {
-        border: 1px dashed #cbd5e1;
-        border-radius: 12px;
-        background: transparent;
-        color: var(--text-secondary);
-        cursor: pointer;
-        font-size: 0.86rem;
-        font-weight: 700;
-        padding: 12px;
-        text-align: left;
-    }
-
-    .profile-hint {
-        display: block;
-        color: var(--text-secondary);
-        font-size: 0.72rem;
-        line-height: 1.35;
-        margin: -8px 0 18px 0;
-    }
-
-    .settings-field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .settings-label {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .settings-input,
-    .settings-textarea,
-    .settings-select {
-        border: none;
-        background: #edf2f7;
-        border-radius: 10px;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        font-weight: 700;
-        padding: 11px 12px;
-        width: 100%;
-    }
-
-    .settings-textarea {
-        min-height: 88px;
-        line-height: 1.45;
-        resize: vertical;
-    }
-
-    .settings-row .settings-select {
-        width: 96px;
-        flex: 0 0 auto;
-    }
-
-    .settings-input:focus,
-    .settings-textarea:focus,
-    .settings-select:focus {
-        outline: 2px solid var(--text-primary);
-    }
-
-    .bean-suggestion-groups {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin: 2px 0 16px;
-    }
-
-    .bean-suggestion-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
-    .bean-chip {
-        border: 1px solid #d9e2ec;
-        border-radius: 999px;
-        background: #f8fafc;
-        color: var(--text-primary);
-        cursor: pointer;
-        font-size: 0.78rem;
-        font-weight: 700;
-        padding: 7px 10px;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .bean-chip.process {
-        background: #eefaf3;
-        border-color: #c9efd8;
-        color: #1f7a45;
-    }
-
-    .settings-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-        background: #f4f7fb;
-        border-radius: 12px;
-        padding: 12px;
-    }
-
-    .settings-row-text {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-    }
-
-    .settings-row-title {
-        font-size: 0.9rem;
-        font-weight: 700;
-    }
-
-    .settings-row-meta {
-        color: var(--text-secondary);
-        font-size: 0.76rem;
-        line-height: 1.35;
-    }
-
-    .settings-toggle {
-        appearance: none;
-        width: 44px;
-        height: 26px;
-        border-radius: 999px;
-        background: #cbd5e1;
-        position: relative;
-        flex: 0 0 auto;
-        transition: background 0.2s ease;
-    }
-
-    .settings-toggle::after {
-        content: "";
-        position: absolute;
-        top: 3px;
-        left: 3px;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: white;
-        transition: transform 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-    }
-
-    .settings-toggle:checked {
-        background: var(--accent-green);
-    }
-
-    .settings-toggle:checked::after {
-        transform: translateX(18px);
-    }
-
-    .settings-toggle:disabled {
-        opacity: 0.5;
-    }
-
-    .secondary-btn,
-    .danger-btn {
-        border: none;
-        border-radius: 10px;
-        background: #edf2f7;
-        color: var(--text-primary);
-        cursor: pointer;
-        font-size: 0.82rem;
-        font-weight: 700;
-        padding: 11px 12px;
-    }
-
-    .danger-btn {
-        color: var(--accent-red);
-    }
-
-    .secondary-btn:disabled,
-    .danger-btn:disabled {
-        cursor: default;
-        opacity: 0.45;
-    }
-
-    .prof-row-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 24px;
-    }
-
-    .prof-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #edf2f7;
-        padding-bottom: 8px;
-    }
-
-    .prof-row[hidden] {
-        display: none;
-    }
-
-    .prof-row span {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-    }
-
-    .prof-input {
-        width: 80px;
-        border: none;
-        background: #edf2f7;
-        padding: 6px 10px;
-        font-size: 0.95rem;
-        text-align: center;
-        border-radius: 8px;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .prof-input:focus {
-        outline: 2px solid var(--text-primary);
-    }
-
-    #testCueBtn {
-        background-color: var(--text-primary);
-        color: white;
-        width: 100%;
-        padding: 14px;
-        border: none;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    #dashboard {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        background: var(--surface);
-        padding: 16px;
-        border-radius: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-    }
-
-    .stat-box {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .stat-box:not(:last-child) {
-        border-right: 1px solid #edf2f7;
-    }
-
-    .stat-label {
-        font-size: 0.7rem;
-        color: var(--text-secondary);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 6px;
-    }
-
-    .stat-value {
-        font-size: 1.6rem;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: -0.03em;
-    }
-
-    #tempDisplay {
-        color: var(--chart-temp);
-    }
-
-    #rorDisplay {
-        color: var(--chart-ror);
-    }
-
-    #weightPanel {
-        background: var(--surface);
-        padding: 16px;
-        border-radius: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-    }
-
-    .weight-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .weight-post-roast {
-        display: contents;
-    }
-
-    .weight-post-roast[hidden] {
-        display: none;
-    }
-
-    .weight-field {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .weight-label {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .weight-input-wrap {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: #edf2f7;
-        border-radius: 12px;
-        padding: 0 12px;
-    }
-
-    .weight-input {
-        width: 100%;
-        border: none;
-        background: transparent;
-        padding: 14px 0;
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        min-width: 0;
-    }
-
-    .weight-input:focus {
-        outline: none;
-    }
-
-    .weight-input:disabled {
-        color: #9aa4af;
-    }
-
-    .weight-unit {
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--text-secondary);
-    }
-
-    .weight-summary {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        background: linear-gradient(135deg, #f4f7fb 0%, #eef4f8 100%);
-        border-radius: 14px;
-        padding: 14px;
-    }
-
-    .weight-summary-label {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .weight-summary-value {
-        font-size: 1.5rem;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        font-variant-numeric: tabular-nums;
-    }
-
-    .weight-summary-meta {
-        font-size: 0.82rem;
-        color: var(--text-secondary);
-    }
-
-    #weightLossDisplay.is-warning {
-        color: var(--accent-red);
-    }
-
-    #canvas-container {
-        background: var(--surface);
-        padding: 16px 8px;
-        border-radius: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-        height: 42vh;
-        min-height: 300px;
-        position: relative;
-    }
-
-    .point-delete-panel {
-        position: fixed;
-        left: 50%;
-        bottom: 104px;
-        transform: translateX(-50%);
-        z-index: 1001;
-        width: min(360px, calc(100vw - 32px));
-        padding: 12px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.96);
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
-        backdrop-filter: blur(10px);
-    }
-
-    .point-delete-panel[hidden] {
-        display: none;
-    }
-
-    .point-delete-title {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--text-muted);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-bottom: 4px;
-    }
-
-    .point-delete-value {
-        display: block;
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 10px;
-    }
-
-    .point-delete-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
-    .point-delete-actions button {
-        border: none;
-        border-radius: 12px;
-        padding: 12px;
-        font-weight: 700;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    #cancelDeletePointBtn {
-        background: #f1f5f9;
-        color: var(--text-primary);
-    }
-
-    #confirmDeletePointBtn {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-
-    #actionUI {
-        position: fixed;
-        bottom: 20px;
-        left: 5%;
-        width: 90%;
-        max-width: 400px;
-        z-index: 999;
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 8px;
-        border-radius: 50px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(0, 0, 0, 0.03);
-    }
-
-    #mainActionBtn {
-        border: none;
-        border-radius: 50%;
-        width: 64px;
-        height: 64px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: white;
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s ease;
-    }
-
-    #mainActionBtn:active {
-        transform: scale(0.92);
-    }
-
-    #mainActionBtn:disabled {
-        cursor: default;
-        opacity: 0.7;
-    }
-
-    #mainActionBtn svg {
-        width: 20px;
-        height: 20px;
-        fill: currentColor;
-    }
-
-    .btn-start {
-        background: var(--accent-green);
-    }
-
-    .btn-crack {
-        background: var(--accent-orange);
-    }
-
-    .btn-stop {
-        background: var(--accent-red);
-    }
-
-    .btn-save {
-        background: var(--accent-save);
-    }
-
-    #crackInfo {
-        display: flex;
-        justify-content: space-around;
-        flex-grow: 1;
-        padding-left: 8px;
-    }
-
-    #crackInfo[hidden] {
-        display: none;
-    }
-
-    .crack-info-box {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .crack-info-label {
-        font-size: 0.65rem;
-        color: var(--text-secondary);
-        font-weight: 600;
-        margin-bottom: 2px;
-    }
-
-    .crack-info-val {
-        font-size: 1.1rem;
-        color: var(--accent-orange);
-        font-variant-numeric: tabular-nums;
-        font-weight: 700;
-    }
-
-    #logToggle {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        margin-top: 8px;
-        opacity: 0.5;
-    }
-
-    #log {
-        display: none;
-        height: 70px;
-        overflow-y: scroll;
-        margin-top: 8px;
-        padding: 8px;
-        text-align: left;
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        border-top: 1px dashed #edf2f7;
-    }
-</style>
+<script src="roast-logic.js"></script>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -859,6 +20,21 @@
     <h1>ROAST LOGGER</h1>
     <button id="profileToggleBtn" aria-label="Settings">⚙️ Settings</button>
 </header>
+
+<div id="historyScrim" class="history-scrim" hidden></div>
+<div id="historyEdgeHandle" class="history-edge-handle" aria-hidden="true"></div>
+<aside id="historyPanel" class="history-panel" aria-label="Past Logs" aria-hidden="true">
+    <div class="history-header">
+        <h2>Past Logs</h2>
+        <button id="historyImportBtn" class="history-import-btn" type="button">Import CSV</button>
+        <input id="historyImportInput" type="file" accept=".csv,text/csv" hidden>
+    </div>
+    <button id="historyCompareToggle" class="history-compare-toggle" type="button">
+        <span>Compare</span>
+        <span class="history-toggle-pill" aria-hidden="true"></span>
+    </button>
+    <div id="historyList" class="history-list"></div>
+</aside>
 
 <div id="profileEditor">
     <div class="modal-content">
@@ -982,6 +158,10 @@
 
 <div id="canvas-container">
     <canvas id="roastChart"></canvas>
+    <div id="chartReadout" class="chart-readout" aria-live="polite">
+        <span id="chartReadoutTime" class="chart-readout-time">00<span class="chart-readout-time-separator">:</span>00</span>
+        <span class="chart-readout-temp"><span id="chartReadoutTemp">---</span><span class="chart-readout-unit">℃</span></span>
+    </div>
 </div>
 
 <div id="pointDeletePanel" class="point-delete-panel" hidden role="dialog" aria-label="Delete captured temperature point">
@@ -1021,10 +201,15 @@
     const profileLibraryVersionKey = 'roastProfileLibraryVersion';
     const activeProfileKey = 'activeRoastProfileId';
     const beanMetadataKey = 'roastBeanMetadata';
+    const roastHistoryKey = 'roastHistory';
     const defaultProfileInputs = ['150', '80', '105', '128', '149', '167', '182', '194', '202', '206', '209', '', '', '', '', ''];
     const maxProfileMinute = 15;
     let profileLibrary = [];
     let activeProfileId = '';
+    let roastHistory = [];
+    let selectedHistoryIds = [];
+    let historyCompareMode = false;
+    let historySwipeStart = null;
 
     function getProfileInputs() {
         return Array.from(document.querySelectorAll('.prof-input'));
@@ -1032,15 +217,6 @@
 
     function getProfileInputValues() {
         return getProfileInputs().map((input) => input.value);
-    }
-
-    function normalizeProfileInputs(values) {
-        const targetLength = maxProfileMinute + 1;
-        const normalized = Array.isArray(values) ? values.slice(0, targetLength).map((value) => value || '') : [];
-        while (normalized.length < targetLength) {
-            normalized.push('');
-        }
-        return normalized;
     }
 
     function createProfileId() {
@@ -1061,22 +237,6 @@
         } catch (error) {
             return null;
         }
-    }
-
-    function appendUniqueSuggestion(currentValue, suggestion) {
-        const value = String(currentValue || '').replace(/\s+/g, ' ').trim();
-        const token = String(suggestion || '').replace(/\s+/g, ' ').trim();
-        if (!token) {
-            return value;
-        }
-
-        const valueLower = value.toLowerCase();
-        const tokenLower = token.toLowerCase();
-        if (valueLower.split(/\s+/).join(' ').includes(tokenLower)) {
-            return value;
-        }
-
-        return value ? `${value} ${token}` : token;
     }
 
     function escapeHtml(value) {
@@ -1132,118 +292,6 @@
             input.value = normalized[index] || '';
         });
         updateProfileRowVisibility();
-    }
-
-    function parseProfileMinuteToken(token, allowBareMinute = true) {
-        const normalized = normalizeNumericText(String(token).trim());
-        const timeMatch = normalized.match(/^(\d{1,2}):(\d{2})$/);
-        if (timeMatch) {
-            const minutes = parseInt(timeMatch[1], 10);
-            const seconds = parseInt(timeMatch[2], 10);
-            return seconds === 0 ? minutes : null;
-        }
-        if (allowBareMinute && /^\d{1,2}$/.test(normalized)) {
-            return parseInt(normalized, 10);
-        }
-        return null;
-    }
-
-    function parseProfileTemperatureToken(token) {
-        const normalized = normalizeNumericText(String(token).trim());
-        if (!/^\d+(?:\.\d+)?$/.test(normalized)) {
-            return null;
-        }
-        const value = parseFloat(normalized);
-        return Number.isFinite(value) && value >= 0 && value <= 300 ? value : null;
-    }
-
-    function formatProfileTemperatureValue(value) {
-        return Number.isInteger(value) ? String(value) : String(parseFloat(value.toFixed(1)));
-    }
-
-    function parseProfilePasteLine(line, fallbackMinute) {
-        const trimmed = line.trim();
-        if (trimmed === '') {
-            return { skipped: true };
-        }
-
-        const tokens = trimmed.split(/[,\t; ]+/).filter(Boolean);
-        const colonIndex = tokens.findIndex((token) => normalizeNumericText(token).includes(':'));
-        let minute = null;
-        let temp = null;
-
-        if (colonIndex !== -1) {
-            minute = parseProfileMinuteToken(tokens[colonIndex], false);
-            for (let i = colonIndex + 1; i < tokens.length; i++) {
-                temp = parseProfileTemperatureToken(tokens[i]);
-                if (temp !== null) {
-                    break;
-                }
-            }
-            if (temp === null) {
-                for (let i = colonIndex - 1; i >= 0; i--) {
-                    temp = parseProfileTemperatureToken(tokens[i]);
-                    if (temp !== null) {
-                        break;
-                    }
-                }
-            }
-        } else {
-            const numbers = tokens
-                .map((token) => ({ token, value: parseProfileTemperatureToken(token) }))
-                .filter((item) => item.value !== null);
-
-            if (numbers.length === 1) {
-                minute = fallbackMinute;
-                temp = numbers[0].value;
-            } else if (numbers.length >= 2) {
-                const first = numbers[0].value;
-                const second = numbers[1].value;
-                if (Number.isInteger(first) && first >= 0 && first <= maxProfileMinute) {
-                    minute = first;
-                    temp = second;
-                } else if (Number.isInteger(second) && second >= 0 && second <= maxProfileMinute) {
-                    minute = second;
-                    temp = first;
-                } else if (Number.isInteger(first) && first % 60 === 0 && first / 60 <= maxProfileMinute) {
-                    minute = first / 60;
-                    temp = second;
-                }
-            }
-        }
-
-        if (minute === null && temp === null && /[a-zA-Z_]/.test(trimmed)) {
-            return { skipped: true };
-        }
-        if (!Number.isInteger(minute) || minute < 0 || minute > maxProfileMinute || temp === null) {
-            return { invalid: true, line: trimmed };
-        }
-
-        return { minute, value: formatProfileTemperatureValue(temp), line: trimmed };
-    }
-
-    function parseProfilePasteText(text, startMinute = 0) {
-        const values = normalizeProfileInputs(getProfileInputValues());
-        const invalidRows = [];
-        let appliedRows = 0;
-        let sequentialMinute = startMinute;
-
-        String(text).split(/\r?\n/).forEach((line) => {
-            const parsed = parseProfilePasteLine(line, sequentialMinute);
-            if (parsed.skipped) {
-                return;
-            }
-            if (parsed.invalid) {
-                invalidRows.push(parsed.line);
-                sequentialMinute++;
-                return;
-            }
-            values[parsed.minute] = parsed.value;
-            appliedRows++;
-            sequentialMinute = parsed.minute + 1;
-        });
-
-        return { values, invalidRows, appliedRows };
     }
 
     function applyProfilePaste(text, startIndex) {
@@ -1969,11 +1017,20 @@
     const pointDeleteText = document.getElementById('pointDeleteText');
     const cancelDeletePointBtn = document.getElementById('cancelDeletePointBtn');
     const confirmDeletePointBtn = document.getElementById('confirmDeletePointBtn');
+    const chartReadout = document.getElementById('chartReadout');
+    const chartReadoutTime = document.getElementById('chartReadoutTime');
+    const chartReadoutTemp = document.getElementById('chartReadoutTemp');
+    const historyPanel = document.getElementById('historyPanel');
+    const historyScrim = document.getElementById('historyScrim');
+    const historyList = document.getElementById('historyList');
+    const historyCompareToggle = document.getElementById('historyCompareToggle');
+    const historyImportBtn = document.getElementById('historyImportBtn');
+    const historyImportInput = document.getElementById('historyImportInput');
 
     if (window['chartjs-plugin-annotation']) {
         Chart.register(window['chartjs-plugin-annotation']);
     }
-    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, sans-serif';
+    Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif';
     Chart.defaults.color = '#6c757d';
 
     const ctx = document.getElementById('roastChart').getContext('2d');
@@ -1991,9 +1048,16 @@
                     yAxisID: 'y-temp',
                     tension: 0.1,
                     borderWidth: 2,
-                    pointRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 2.5 : 0,
-                    pointHitRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 18 : 0,
-                    pointHoverRadius: (context) => hasCapturedTempAtIndex(context.dataIndex) ? 5 : 0
+                    segment: {
+                        borderColor: (context) => segmentUsesInterpolatedPoint(context) ? 'rgba(231, 76, 60, 0.42)' : '#e74c3c',
+                        borderDash: (context) => segmentUsesInterpolatedPoint(context) ? [4, 5] : []
+                    },
+                    pointRadius: (context) => getTempPointRadius(context.dataIndex),
+                    pointHitRadius: (context) => hasTempAtIndex(context.dataIndex) ? 18 : 0,
+                    pointHoverRadius: (context) => hasTempAtIndex(context.dataIndex) ? 5 : 0,
+                    pointBackgroundColor: (context) => hasCapturedTempAtIndex(context.dataIndex) ? '#e74c3c' : 'rgba(255, 255, 255, 0.92)',
+                    pointBorderColor: (context) => hasCapturedTempAtIndex(context.dataIndex) ? '#fff' : 'rgba(231, 76, 60, 0.48)',
+                    pointBorderWidth: (context) => hasTempAtIndex(context.dataIndex) ? (hasCapturedTempAtIndex(context.dataIndex) ? 2 : 1.7) : 0
                 },
                 { label: 'RoR', data: rors, borderColor: '#3498db', backgroundColor: 'transparent', yAxisID: 'y-ror', tension: 0.4, borderWidth: 1.5, pointRadius: 0, borderDash: [2, 2] }
             ]
@@ -2192,11 +1256,6 @@
         return typeof navigator.vibrate === 'function';
     }
 
-    function normalizeCueInterval(value) {
-        const interval = parseInt(value, 10);
-        return interval === 15 ? 15 : 10;
-    }
-
     function applyCueInterval(intervalSec) {
         const nextInterval = normalizeCueInterval(intervalSec);
         if (cueInterval === nextInterval) {
@@ -2332,29 +1391,6 @@
                 }
             }
         };
-    }
-
-    function normalizeNumericText(value) {
-        return value
-            .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-            .replace(/[．。点]/g, '.')
-            .replace(/[，、]/g, '.')
-            .replace(/\s+/g, '');
-    }
-
-    function parseRecognizedTemperature(transcript) {
-        const normalized = normalizeNumericText(transcript);
-        const match = normalized.match(/\d+(?:\.\d+)?/);
-        if (!match) {
-            return null;
-        }
-
-        const token = match[0];
-        const value = token.includes('.') || token.length !== 4
-            ? parseFloat(token)
-            : parseFloat(token) / 10;
-
-        return Number.isFinite(value) ? { value, token } : null;
     }
 
     function findPreviousValidIndex(startIndex) {
@@ -2527,13 +1563,60 @@
         return `${Math.floor(safeSeconds / 60).toString().padStart(2, '0')}:${(safeSeconds % 60).toString().padStart(2, '0')}`;
     }
 
-    function roundToDataSlot(seconds) {
-        return Math.max(0, Math.round(seconds / dataInterval) * dataInterval);
+    function formatTimeWithLightSeparator(seconds) {
+        return formatTime(seconds).replace(':', '<span class="chart-readout-time-separator">:</span>');
+    }
+
+    function formatChartTemperature(value) {
+        if (!Number.isFinite(value)) {
+            return '---';
+        }
+        return Math.abs(value - Math.round(value)) < 0.05 ? String(Math.round(value)) : value.toFixed(1);
+    }
+
+    function hasTempAtIndex(index) {
+        const temp = temps[index];
+        return temp !== undefined && temp !== null && Number.isFinite(temp);
     }
 
     function hasCapturedTempAtIndex(index) {
         const temp = rawTemps[index];
         return temp !== undefined && temp !== null && Number.isFinite(temp);
+    }
+
+    function hasInterpolatedTempAtIndex(index) {
+        return hasTempAtIndex(index) && !hasCapturedTempAtIndex(index);
+    }
+
+    function getTempPointRadius(index) {
+        if (hasCapturedTempAtIndex(index)) {
+            return 2.8;
+        }
+        return hasInterpolatedTempAtIndex(index) ? 2.3 : 0;
+    }
+
+    function segmentUsesInterpolatedPoint(context) {
+        const startIndex = context.p0DataIndex;
+        const endIndex = context.p1DataIndex;
+        return hasTempAtIndex(startIndex)
+            && hasTempAtIndex(endIndex)
+            && (!hasCapturedTempAtIndex(startIndex) || !hasCapturedTempAtIndex(endIndex));
+    }
+
+    function showChartReadout(index) {
+        if (!hasTempAtIndex(index)) {
+            hideChartReadout();
+            return;
+        }
+
+        const pointTime = labels[index] !== undefined ? labels[index] : index * dataInterval;
+        chartReadoutTime.innerHTML = formatTimeWithLightSeparator(pointTime);
+        chartReadoutTemp.textContent = formatChartTemperature(temps[index]);
+        chartReadout.classList.add('is-visible');
+    }
+
+    function hideChartReadout() {
+        chartReadout.classList.remove('is-visible');
     }
 
     function hidePointDeletePanel() {
@@ -2554,13 +1637,19 @@
     }
 
     function handleChartClick(event, elements = []) {
-        const capturedElement = elements.find((element) => element.datasetIndex === 1 && hasCapturedTempAtIndex(element.index));
-        if (!capturedElement) {
+        const tempElement = elements.find((element) => element.datasetIndex === 1 && hasTempAtIndex(element.index));
+        if (!tempElement) {
+            hideChartReadout();
             hidePointDeletePanel();
             return;
         }
 
-        showPointDeletePanel(capturedElement.index);
+        showChartReadout(tempElement.index);
+        if (hasCapturedTempAtIndex(tempElement.index)) {
+            showPointDeletePanel(tempElement.index);
+        } else {
+            hidePointDeletePanel();
+        }
     }
 
     function deleteCapturedPoint(index) {
@@ -2571,6 +1660,7 @@
         const deletedTemp = rawTemps[index];
         const pointTime = labels[index] !== undefined ? labels[index] : index * dataInterval;
         rawTemps[index] = null;
+        hideChartReadout();
         rebuildInterpolatedTemps();
         updateCrackInfo();
         roastChart.update();
@@ -2714,6 +1804,7 @@
 
     function resetChartState() {
         hidePointDeletePanel();
+        hideChartReadout();
         rawTemps.length = 0;
         temps.length = 0;
         rors.length = 0;
@@ -2784,6 +1875,242 @@
         const minutes = String(date.getMinutes()).padStart(2, '0');
         const seconds = String(date.getSeconds()).padStart(2, '0');
         return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+    }
+
+    function createHistoryId() {
+        return `roast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function loadRoastHistory() {
+        const savedHistory = readJsonStorage(roastHistoryKey);
+        roastHistory = Array.isArray(savedHistory) ? savedHistory.filter((entry) => entry && entry.id) : [];
+    }
+
+    function saveRoastHistory() {
+        localStorage.setItem(roastHistoryKey, JSON.stringify(roastHistory.slice(0, 40)));
+    }
+
+    function formatHistoryDateTime(value) {
+        if (!value) {
+            return '--/-- --:--';
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return '--/-- --:--';
+        }
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${month}/${day} ${hours}:${minutes}`;
+    }
+
+    function formatHistoryDuration(seconds) {
+        const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+        return `${Math.floor(safeSeconds / 60)}m${String(safeSeconds % 60).padStart(2, '0')}s`;
+    }
+
+    function formatHistoryLoss(value) {
+        return Number.isFinite(value) ? `loss ${value.toFixed(1)}%` : 'loss --.-%';
+    }
+
+    function createRoastHistoryEntry() {
+        const durationSeconds = roastStopSeconds ?? Math.max(currentSeconds, 0);
+        const weightLossPercent = updateWeightLossDisplay();
+        const beanMetadata = getBeanMetadata();
+        const sampleCount = Math.min(labels.length, Math.floor(durationSeconds / dataInterval) + 1);
+
+        return {
+            id: createHistoryId(),
+            createdAt: new Date().toISOString(),
+            startedAt: roastStartedAt ? roastStartedAt.toISOString() : '',
+            stoppedAt: roastStoppedAt ? roastStoppedAt.toISOString() : '',
+            beanName: beanMetadata.beanName || 'Untitled roast',
+            durationSec: durationSeconds,
+            weightLossPercent,
+            labels: labels.slice(0, sampleCount),
+            rawTemps: rawTemps.slice(0, sampleCount),
+            temps: temps.slice(0, sampleCount),
+            rors: rors.slice(0, sampleCount),
+            referenceProfile: referenceProfile.slice(0, sampleCount),
+            crackSeconds,
+            crackTemp
+        };
+    }
+
+    function addRoastHistoryEntry(entry) {
+        if (!entry || !entry.id) {
+            return;
+        }
+        roastHistory = [entry, ...roastHistory.filter((item) => item.id !== entry.id)].slice(0, 40);
+        if (selectedHistoryIds.length === 0) {
+            selectedHistoryIds = [entry.id];
+        }
+        saveRoastHistory();
+        renderRoastHistory();
+    }
+
+    function parseCsvLine(line) {
+        const result = [];
+        let current = '';
+        let quoted = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                if (quoted && line[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    quoted = !quoted;
+                }
+            } else if (char === ',' && !quoted) {
+                result.push(current);
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current);
+        return result;
+    }
+
+    function createHistoryEntryFromCsv(text, fileName) {
+        const metadata = {};
+        String(text).replace(/^\uFEFF/, '').split(/\r?\n/).some((line, index) => {
+            if (line.trim() === '') {
+                return true;
+            }
+            if (index === 0) {
+                return false;
+            }
+            const [key, value] = parseCsvLine(line);
+            if (key) {
+                metadata[key] = value || '';
+            }
+            return false;
+        });
+
+        return {
+            id: createHistoryId(),
+            createdAt: new Date().toISOString(),
+            startedAt: metadata.roast_started_at || metadata.exported_at || '',
+            stoppedAt: metadata.roast_stopped_at || '',
+            beanName: metadata.bean_name || fileName.replace(/\.csv$/i, '') || 'Imported roast',
+            durationSec: parseInt(metadata.roast_duration_sec || '0', 10) || 0,
+            weightLossPercent: metadata.weight_loss_percent !== undefined && metadata.weight_loss_percent !== ''
+                ? parseFloat(metadata.weight_loss_percent)
+                : null
+        };
+    }
+
+    function renderRoastHistory() {
+        if (!historyList) {
+            return;
+        }
+
+        if (roastHistory.length > 0 && selectedHistoryIds.length === 0) {
+            selectedHistoryIds = [roastHistory[0].id];
+        }
+
+        historyCompareToggle.classList.toggle('is-on', historyCompareMode);
+        historyList.innerHTML = '';
+
+        if (roastHistory.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'history-empty';
+            empty.textContent = 'No logs';
+            historyList.appendChild(empty);
+            return;
+        }
+
+        roastHistory.forEach((entry) => {
+            const selectedIndex = selectedHistoryIds.indexOf(entry.id);
+            const isSelected = selectedIndex !== -1;
+            const markText = isSelected ? (historyCompareMode ? selectedIndex + 1 : '✓') : '';
+            const button = document.createElement('button');
+            button.className = `history-card${isSelected ? ' is-selected' : ''}`;
+            button.type = 'button';
+            button.setAttribute('data-history-id', entry.id);
+            button.innerHTML = `
+                <span class="history-card-mark">${markText}</span>
+                <span class="history-card-top">${escapeHtml(formatHistoryDateTime(entry.startedAt || entry.createdAt))}</span>
+                <span class="history-card-bean">${escapeHtml(entry.beanName || 'Untitled roast')}</span>
+                <span class="history-card-meta">${escapeHtml(formatHistoryDuration(entry.durationSec))} · ${escapeHtml(formatHistoryLoss(entry.weightLossPercent))}</span>
+            `;
+            button.addEventListener('click', () => selectHistoryEntry(entry.id));
+            historyList.appendChild(button);
+        });
+    }
+
+    function selectHistoryEntry(historyId) {
+        if (historyCompareMode) {
+            if (selectedHistoryIds.includes(historyId)) {
+                selectedHistoryIds = selectedHistoryIds.filter((id) => id !== historyId);
+            } else {
+                selectedHistoryIds = [...selectedHistoryIds.slice(-1), historyId].slice(-2);
+            }
+        } else {
+            selectedHistoryIds = [historyId];
+        }
+        renderRoastHistory();
+    }
+
+    function setHistoryPanelOpen(isOpen) {
+        historyPanel.classList.toggle('is-open', isOpen);
+        historyPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        historyScrim.hidden = !isOpen;
+    }
+
+    function canOpenHistoryPanel() {
+        return roastPhase === 0 && profileEditor.style.display !== 'block';
+    }
+
+    function shouldIgnoreHistorySwipeTarget(target) {
+        return Boolean(target.closest('input, textarea, select, button, #profileEditor, .history-panel'));
+    }
+
+    function handleHistorySwipeStart(event) {
+        if (!canOpenHistoryPanel() || historyPanel.classList.contains('is-open')) {
+            return;
+        }
+        if (event.clientX > 24 || shouldIgnoreHistorySwipeTarget(event.target)) {
+            return;
+        }
+        historySwipeStart = {
+            x: event.clientX,
+            y: event.clientY,
+            pointerId: event.pointerId
+        };
+    }
+
+    function handleHistorySwipeEnd(event) {
+        if (!historySwipeStart || event.pointerId !== historySwipeStart.pointerId) {
+            return;
+        }
+        const deltaX = event.clientX - historySwipeStart.x;
+        const deltaY = event.clientY - historySwipeStart.y;
+        historySwipeStart = null;
+
+        if (deltaX > 72 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+            loadRoastHistory();
+            renderRoastHistory();
+            setHistoryPanelOpen(true);
+        }
+    }
+
+    function handleHistorySwipeCancel() {
+        historySwipeStart = null;
+    }
+
+    function importHistoryCsv(file) {
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            addRoastHistoryEntry(createHistoryEntryFromCsv(String(reader.result || ''), file.name));
+        });
+        reader.readAsText(file);
     }
 
     function calculateDataQuality(sampleCount) {
@@ -2875,6 +2202,7 @@
 
     async function startRoast() {
         hidePointDeletePanel();
+        hideChartReadout();
         isRoasting = true;
         currentSeconds = 0;
         lastProcessedSlotIndex = -1;
@@ -2977,7 +2305,9 @@
         saveInProgress = true;
         mainActionBtn.disabled = true;
         try {
+            const historyEntry = createRoastHistoryEntry();
             exportCSV();
+            addRoastHistoryEntry(historyEntry);
             resetUI(true);
             lockMainAction(800);
         } catch (error) {
@@ -3000,6 +2330,19 @@
             applyBeanSuggestion(button.getAttribute('data-bean-suggestion'));
         });
     });
+    historyCompareToggle.addEventListener('click', () => {
+        historyCompareMode = !historyCompareMode;
+        if (!historyCompareMode && selectedHistoryIds.length > 1) {
+            selectedHistoryIds = [selectedHistoryIds[0]];
+        }
+        renderRoastHistory();
+    });
+    historyImportBtn.addEventListener('click', () => historyImportInput.click());
+    historyImportInput.addEventListener('change', () => {
+        importHistoryCsv(historyImportInput.files?.[0]);
+        historyImportInput.value = '';
+    });
+    historyScrim.addEventListener('click', () => setHistoryPanelOpen(false));
     cancelDeletePointBtn.addEventListener('click', hidePointDeletePanel);
     confirmDeletePointBtn.addEventListener('click', () => {
         if (pendingDeletePointIndex !== null) {
@@ -3010,8 +2353,12 @@
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             hidePointDeletePanel();
+            setHistoryPanelOpen(false);
         }
     });
+    document.addEventListener('pointerdown', handleHistorySwipeStart, { passive: true });
+    document.addEventListener('pointerup', handleHistorySwipeEnd, { passive: true });
+    document.addEventListener('pointercancel', handleHistorySwipeCancel, { passive: true });
     testCueBtn.addEventListener('click', async () => {
         await primeAudioOutput();
         await playCue();
@@ -3044,6 +2391,8 @@
         }
     });
 
+    loadRoastHistory();
+    renderRoastHistory();
     resetUI(false);
 </script>
 </body>

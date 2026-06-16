@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Issue 18 - Chart Point Preview</title>
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --ink: #241d18;
+      --muted: #81766c;
+      --grid: rgba(36, 29, 24, 0.08);
+      --actual: #e4553f;
+      --estimated: rgba(228, 85, 63, 0.28);
+      --estimated-line: rgba(228, 85, 63, 0.42);
+      --target: rgba(91, 103, 117, 0.46);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    }
+
+    main {
+      width: min(780px, 100%);
+      margin: 0 auto;
+      padding: 18px 14px 28px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+    }
+
+    .summary {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+
+    .preview-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .preview-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .preview-title strong {
+      font-size: 0.92rem;
+      letter-spacing: -0.02em;
+    }
+
+    .preview-title span {
+      color: var(--muted);
+      font-size: 0.76rem;
+      white-space: nowrap;
+    }
+
+    .chart {
+      position: relative;
+      height: 260px;
+      border-top: 1px solid rgba(36, 29, 24, 0.1);
+      border-bottom: 1px solid rgba(36, 29, 24, 0.1);
+      background:
+        repeating-linear-gradient(0deg, transparent 0 51px, var(--grid) 52px),
+        repeating-linear-gradient(90deg, transparent 0 74px, var(--grid) 75px);
+    }
+
+    .chart.compact {
+      height: 168px;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: manipulation;
+    }
+
+    .target-line,
+    .roast-line,
+    .roast-line-estimated {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .target-line {
+      stroke: var(--target);
+      stroke-width: 2;
+      stroke-dasharray: 6 5;
+    }
+
+    .roast-line {
+      stroke: var(--actual);
+      stroke-width: 3;
+    }
+
+    .roast-line-estimated {
+      stroke: var(--estimated-line);
+      stroke-width: 3;
+      stroke-dasharray: 4 5;
+    }
+
+    .actual-point {
+      fill: var(--actual);
+      stroke: var(--bg);
+      stroke-width: 2.5;
+    }
+
+    .estimated-point {
+      fill: rgba(250, 247, 242, 0.9);
+      stroke: var(--estimated-line);
+      stroke-width: 2;
+    }
+
+    .guide {
+      stroke: rgba(36, 29, 24, 0.22);
+      stroke-width: 1;
+      stroke-dasharray: 2 4;
+      opacity: 0;
+    }
+
+    .selected-ring {
+      fill: none;
+      stroke: rgba(228, 85, 63, 0.25);
+      stroke-width: 7;
+      opacity: 0;
+    }
+
+    .hit-target {
+      fill: transparent;
+      cursor: pointer;
+    }
+
+    .inline-readout {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+      padding: 0;
+      color: var(--ink);
+      pointer-events: none;
+      text-shadow:
+        0 1px 0 rgba(250, 247, 242, 0.9),
+        0 0 8px rgba(250, 247, 242, 0.8);
+    }
+
+    .inline-temp {
+      display: inline-flex;
+      align-items: baseline;
+      font-size: 1.72rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    .inline-unit {
+      position: relative;
+      top: -0.02em;
+      margin-left: 2px;
+      font-size: 0.62em;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .inline-meta {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .time-separator {
+      font-weight: 300;
+    }
+
+    .note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding-inline: 10px;
+      }
+
+      .chart {
+        height: 245px;
+      }
+
+      .chart.compact {
+        height: 150px;
+      }
+
+      .inline-temp {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>点と線のスタイル案</h1>
+    <p class="summary">文字ラベルは出さず、塗り点と白抜き点、実線と破線だけで状態を読む。</p>
+
+    <div class="preview-stack">
+      <section>
+        <div class="preview-title">
+          <strong>A / 点だけ差別化</strong>
+          <span>最小</span>
+        </div>
+        <div class="chart compact">
+          <svg viewBox="0 0 640 210" role="img" aria-label="actual and estimated points">
+            <path class="target-line" d="M32 46 C112 92 188 105 266 87 S438 50 608 26"></path>
+            <path class="roast-line" d="M32 50 C92 145 154 180 224 136 S368 78 608 24"></path>
+            <circle class="actual-point" cx="32" cy="50" r="5"></circle>
+            <circle class="estimated-point" cx="92" cy="145" r="4.2"></circle>
+            <circle class="estimated-point" cx="154" cy="180" r="4.2"></circle>
+            <circle class="actual-point" cx="224" cy="136" r="5"></circle>
+            <circle class="estimated-point" cx="296" cy="98" r="4.2"></circle>
+            <circle class="actual-point" cx="368" cy="78" r="5"></circle>
+            <circle class="estimated-point" cx="452" cy="58" r="4.2"></circle>
+            <circle class="actual-point" cx="530" cy="42" r="5"></circle>
+            <circle class="actual-point" cx="608" cy="24" r="5"></circle>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <div class="preview-title">
+          <strong>B / 線分も変える</strong>
+          <span>本命</span>
+        </div>
+        <div class="chart compact">
+          <svg viewBox="0 0 640 210" role="img" aria-label="interpolated segments are subtle">
+            <path class="target-line" d="M32 46 C112 92 188 105 266 87 S438 50 608 26"></path>
+            <path class="roast-line-estimated" d="M32 50 C54 92 72 124 92 145"></path>
+            <path class="roast-line-estimated" d="M92 145 C112 162 132 174 154 180"></path>
+            <path class="roast-line-estimated" d="M154 180 C178 166 204 150 224 136"></path>
+            <path class="roast-line-estimated" d="M224 136 C250 118 274 104 296 98"></path>
+            <path class="roast-line-estimated" d="M296 98 C324 88 346 82 368 78"></path>
+            <path class="roast-line-estimated" d="M368 78 C398 70 424 64 452 58"></path>
+            <path class="roast-line-estimated" d="M452 58 C480 52 506 47 530 42"></path>
+            <path class="roast-line" d="M530 42 C560 34 584 29 608 24"></path>
+            <circle class="actual-point" cx="32" cy="50" r="5"></circle>
+            <circle class="estimated-point" cx="92" cy="145" r="4.2"></circle>
+            <circle class="estimated-point" cx="154" cy="180" r="4.2"></circle>
+            <circle class="actual-point" cx="224" cy="136" r="5"></circle>
+            <circle class="estimated-point" cx="296" cy="98" r="4.2"></circle>
+            <circle class="actual-point" cx="368" cy="78" r="5"></circle>
+            <circle class="estimated-point" cx="452" cy="58" r="4.2"></circle>
+            <circle class="actual-point" cx="530" cy="42" r="5"></circle>
+            <circle class="actual-point" cx="608" cy="24" r="5"></circle>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <div class="preview-title">
+          <strong>Interactive / タップして読む</strong>
+          <span>値は軽く左上</span>
+        </div>
+        <div class="chart" id="interactiveChart">
+          <svg id="roastPreviewSvg" viewBox="0 0 640 260" role="img" aria-label="interactive roast chart">
+            <path class="target-line" d="M32 58 C112 118 188 130 266 108 S438 66 608 38"></path>
+            <path class="roast-line-estimated" d="M32 60 C54 104 72 148 92 172"></path>
+            <path class="roast-line-estimated" d="M92 172 C112 192 132 207 154 214"></path>
+            <path class="roast-line-estimated" d="M154 214 C178 198 204 178 224 160"></path>
+            <path class="roast-line-estimated" d="M224 160 C250 138 274 124 296 116"></path>
+            <path class="roast-line-estimated" d="M296 116 C324 104 346 98 368 92"></path>
+            <path class="roast-line-estimated" d="M368 92 C398 82 424 76 452 70"></path>
+            <path class="roast-line-estimated" d="M452 70 C480 62 506 54 530 48"></path>
+            <path class="roast-line" d="M530 48 C560 42 584 36 608 32"></path>
+            <line id="selectedGuide" class="guide" x1="224" y1="24" x2="224" y2="236"></line>
+            <circle id="selectedRing" class="selected-ring" cx="224" cy="160" r="9"></circle>
+            <g id="pointsLayer"></g>
+          </svg>
+          <div class="inline-readout" aria-live="polite">
+            <span class="inline-meta" id="readoutMeta">03<span class="time-separator">:</span>00</span>
+            <span class="inline-temp"><span id="readoutTemp">128</span><span class="inline-unit">℃</span></span>
+          </div>
+        </div>
+        <p class="note">タップ中の値は左上の温度と時刻だけ更新する。</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const points = [
+      { x: 32, y: 60, temp: 160, time: '00:00', kind: 'actual' },
+      { x: 92, y: 172, temp: 91, time: '01:00', kind: 'estimated' },
+      { x: 154, y: 214, temp: 75, time: '02:00', kind: 'estimated' },
+      { x: 224, y: 160, temp: 128, time: '03:00', kind: 'actual' },
+      { x: 296, y: 116, temp: 149, time: '04:00', kind: 'estimated' },
+      { x: 368, y: 92, temp: 167, time: '05:00', kind: 'actual' },
+      { x: 452, y: 70, temp: 182, time: '06:00', kind: 'estimated' },
+      { x: 530, y: 48, temp: 194, time: '07:00', kind: 'actual' },
+      { x: 608, y: 32, temp: 202, time: '08:00', kind: 'actual' }
+    ];
+
+    const svg = document.getElementById('roastPreviewSvg');
+    const layer = document.getElementById('pointsLayer');
+    const guide = document.getElementById('selectedGuide');
+    const ring = document.getElementById('selectedRing');
+    const readoutTemp = document.getElementById('readoutTemp');
+    const readoutMeta = document.getElementById('readoutMeta');
+
+    points.forEach((point, index) => {
+      const visiblePoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      visiblePoint.setAttribute('class', point.kind === 'actual' ? 'actual-point' : 'estimated-point');
+      visiblePoint.setAttribute('cx', point.x);
+      visiblePoint.setAttribute('cy', point.y);
+      visiblePoint.setAttribute('r', point.kind === 'actual' ? 5 : 4.2);
+      layer.appendChild(visiblePoint);
+
+      const hitTarget = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      hitTarget.setAttribute('class', 'hit-target');
+      hitTarget.setAttribute('cx', point.x);
+      hitTarget.setAttribute('cy', point.y);
+      hitTarget.setAttribute('r', 28);
+      hitTarget.addEventListener('pointerdown', () => selectPoint(index));
+      layer.appendChild(hitTarget);
+    });
+
+    function selectPoint(index) {
+      const point = points[index];
+      guide.setAttribute('x1', point.x);
+      guide.setAttribute('x2', point.x);
+      guide.style.opacity = '1';
+      ring.setAttribute('cx', point.x);
+      ring.setAttribute('cy', point.y);
+      ring.style.opacity = '1';
+      readoutTemp.textContent = point.temp;
+      readoutMeta.innerHTML = point.time.replace(':', '<span class="time-separator">:</span>');
+    }
+
+    svg.addEventListener('pointermove', (event) => {
+      if (event.buttons !== 1 && event.pointerType !== 'touch') {
+        return;
+      }
+
+      const rect = svg.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 640;
+      const nearest = points.reduce((best, point, index) => {
+        const distance = Math.abs(point.x - x);
+        return distance < best.distance ? { index, distance } : best;
+      }, { index: 0, distance: Infinity });
+
+      selectPoint(nearest.index);
+    });
+
+    selectPoint(3);
+  </script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile Active State Preview</title>
+<style>
+    :root {
+        --bg-main: #f8f9fa;
+        --surface: #ffffff;
+        --text-primary: #212529;
+        --text-secondary: #6c757d;
+        --accent-green: #2cbd6d;
+        --accent-red: #e74c3c;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg-main);
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 24px 14px;
+    }
+
+    .preview-shell {
+        display: grid;
+        gap: 18px;
+        margin: 0 auto;
+        max-width: 390px;
+    }
+
+    .modal-content {
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 8px;
+    }
+
+    .settings-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        background: #edf2f7;
+        border-radius: 12px;
+        margin-bottom: 18px;
+        padding: 4px;
+        position: relative;
+    }
+
+    .settings-tab-indicator {
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        left: 4px;
+        width: calc((100% - 20px) / 3);
+        border-radius: 9px;
+        background: var(--surface);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 6px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .settings-tab {
+        border: none;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 9px 10px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .settings-tab.is-active {
+        color: var(--text-primary);
+    }
+
+    .variant {
+        border-top: 1px solid #edf2f7;
+        padding-top: 16px;
+    }
+
+    .variant:first-of-type {
+        border-top: none;
+        padding-top: 0;
+    }
+
+    .variant-label {
+        color: var(--text-secondary);
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+    }
+
+    .profile-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .profile-row {
+        --profile-row-offset: 0px;
+        --profile-delete-opacity: 0;
+        background: #edf2f7;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .profile-row-body {
+        align-items: center;
+        background: #edf2f7;
+        display: flex;
+        gap: 10px;
+        min-height: 46px;
+        padding: 6px 10px;
+        position: relative;
+        border: 1.5px solid transparent;
+        border-radius: 12px;
+        transform: translateX(var(--profile-row-offset));
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.18s ease, border-color 0.18s ease;
+        z-index: 1;
+    }
+
+    .profile-delete-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 58px;
+        height: 100%;
+        border: none;
+        background: var(--accent-red);
+        color: white;
+        font-size: 1.15rem;
+        font-weight: 800;
+        opacity: var(--profile-delete-opacity);
+    }
+
+    .profile-name {
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 0.94rem;
+        font-weight: 700;
+        min-width: 0;
+        padding: 8px 2px;
+    }
+
+    .profile-name:focus {
+        outline: none;
+    }
+
+    .option-a .profile-row.is-active {
+        background: #f8fcfa;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .option-a .profile-row.is-active .profile-row-body {
+        border-color: rgba(44, 189, 109, 0.52);
+        background: #f8fcfa;
+    }
+
+    .option-a .profile-row.is-active .profile-name {
+        color: #178a4c;
+    }
+
+    .option-b .profile-row.is-active {
+        background: #fbfffd;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .option-b .profile-row.is-active .profile-row-body {
+        border-color: rgba(44, 189, 109, 0.72);
+        background: #fbfffd;
+    }
+
+    .option-b .profile-row.is-active .profile-name {
+        color: #147a43;
+    }
+
+    .option-c .profile-row.is-active {
+        background: #ffffff;
+    }
+
+    .option-c .profile-row.is-active .profile-row-body {
+        border-color: rgba(44, 189, 109, 0.62);
+        background: #ffffff;
+        padding-right: 38px;
+    }
+
+    .option-c .profile-row.is-active .profile-name {
+        color: #168349;
+    }
+
+    .option-c .profile-row.is-active .profile-row-body::after {
+        align-items: center;
+        background: var(--accent-green);
+        border-radius: 999px;
+        color: #ffffff;
+        content: "✓";
+        display: flex;
+        font-size: 0.72rem;
+        font-weight: 800;
+        height: 20px;
+        justify-content: center;
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+    }
+</style>
+</head>
+<body>
+<main class="preview-shell">
+    <section class="modal-content option-a">
+        <h3>Settings</h3>
+        <div class="settings-tabs">
+            <span class="settings-tab-indicator"></span>
+            <button class="settings-tab is-active" type="button">Profile</button>
+            <button class="settings-tab" type="button">Bean</button>
+            <button class="settings-tab" type="button">Cue</button>
+        </div>
+        <div class="variant">
+            <span class="variant-label">A / thin border</span>
+            <div class="profile-list">
+                <div class="profile-row is-active">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Default"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Ethiopia Light"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Washed 10min"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="modal-content option-b">
+        <h3>Settings</h3>
+        <div class="settings-tabs">
+            <span class="settings-tab-indicator"></span>
+            <button class="settings-tab is-active" type="button">Profile</button>
+            <button class="settings-tab" type="button">Bean</button>
+            <button class="settings-tab" type="button">Cue</button>
+        </div>
+        <div class="variant">
+            <span class="variant-label">B / strong border</span>
+            <div class="profile-list">
+                <div class="profile-row is-active">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Default"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Ethiopia Light"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Washed 10min"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="modal-content option-c">
+        <h3>Settings</h3>
+        <div class="settings-tabs">
+            <span class="settings-tab-indicator"></span>
+            <button class="settings-tab is-active" type="button">Profile</button>
+            <button class="settings-tab" type="button">Bean</button>
+            <button class="settings-tab" type="button">Cue</button>
+        </div>
+        <div class="variant">
+            <span class="variant-label">C / icon</span>
+            <div class="profile-list">
+                <div class="profile-row is-active">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Default"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Ethiopia Light"></div>
+                </div>
+                <div class="profile-row">
+                    <button class="profile-delete-btn" type="button">×</button>
+                    <div class="profile-row-body"><input class="profile-name" value="Washed 10min"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

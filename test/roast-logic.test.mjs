@@ -4,6 +4,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const sharedLogic = readFileSync(new URL('../roast-logic.js', import.meta.url), 'utf8');
 
 function extractFunctionSource(name) {
     const start = html.indexOf(`function ${name}(`);
@@ -43,18 +44,8 @@ function createLogicContext() {
     };
 
     vm.createContext(context);
+    vm.runInContext(sharedLogic, context);
     [
-        'normalizeProfileInputs',
-        'normalizeNumericText',
-        'parseProfileMinuteToken',
-        'parseProfileTemperatureToken',
-        'formatProfileTemperatureValue',
-        'parseProfilePasteLine',
-        'parseProfilePasteText',
-        'appendUniqueSuggestion',
-        'normalizeCueInterval',
-        'roundToDataSlot',
-        'parseRecognizedTemperature',
         'findPreviousValidIndex',
         'detectOutlier',
         'interpolateMissingData',

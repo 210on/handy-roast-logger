@@ -44,8 +44,13 @@ Handy Roast Logger は、データ分析ツールではなく、焙煎中に邪�
 - Surface: 白いカード、16px radius、弱い shadow を基本にする。
 - Text: `--text-primary` と `--text-secondary` の2階調を中心にする。
 - Accent: green / orange / red / save blue-gray は状態表現に限定する。
-- Typography: system font、太い数字、tabular nums を維持する。
+- Typography: SF Pro / Hiragino Sans / ヒラギノ角ゴ / Yu Gothic などのゴシック系 system font を維持する。
+- 数字は読み取りやすさを優先し、必要な箇所では太い数字と tabular nums を使う。
+- 温度表示では、数値を主役にし、`℃` は数値より小さくする。単位は数値に対して自然なベースラインに揃える。
+- 時刻表示では、`:` だけ少し軽い font weight にして、数字の読み取りを邪魔しないようにする。
 - Motion: 押下・表示切替の小さい transition だけにする。
+- 過剰な角丸四角形や装飾背景を重ねない。カードや背景面は、情報のまとまりを作る必要がある場合だけ使う。
+- スマホの限られた画面では、装飾面積よりグラフ・入力・主操作の可用面積を優先する。
 
 新しい UI を作る場合は、既存の以下の形を再利用する。
 
@@ -88,6 +93,8 @@ GUI 変更は、実装前に2案の HTML mockup を作る。ただし、mockup �
 
 - 既存の色・radius・shadow・font weight と馴染む。
 - 新しいカードを足す前に、既存カードに統合できないか検討する。
+- プレビューでも、過剰な角丸カード背景で画面を分割しすぎない。
+- フォントは本体と同じゴシック系 system font を使い、mockup だけ別世界の書体にしない。
 - post-roast 画面でも、主役は roast curve と SAVE までの流れ。
 - 情報量を増やす場合は、必ず「表示しない状態」を標準にする。
 - mockup の説明には、どの issue の acceptance criteria を満たすかを書く。ただし説明文は可視UIではなく、issue コメントやREADME側に置く。
