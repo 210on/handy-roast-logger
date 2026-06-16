@@ -21,12 +21,22 @@
     <button id="profileToggleBtn" aria-label="Settings">⚙️ Settings</button>
 </header>
 
+<div id="historyViewerBanner" class="history-viewer-banner" hidden>
+    <div class="history-viewer-copy">
+        <span class="history-viewer-label">Past Log</span>
+        <span id="historyViewerTitle" class="history-viewer-title">Untitled roast</span>
+        <span id="historyViewerMeta" class="history-viewer-meta">--/-- --:-- · 0m00s</span>
+    </div>
+    <button id="historyExitViewerBtn" class="history-viewer-exit" type="button">New Roast</button>
+</div>
+
 <div id="historyScrim" class="history-scrim" hidden></div>
 <div id="historyEdgeHandle" class="history-edge-handle" aria-hidden="true"></div>
 <aside id="historyPanel" class="history-panel" aria-label="Past Logs" aria-hidden="true">
     <div class="history-header">
         <h2>Past Logs</h2>
         <button id="historyImportBtn" class="history-import-btn" type="button">Import CSV</button>
+        <button id="historyCollapseBtn" class="panel-collapse-btn history-collapse-btn" type="button" aria-label="Collapse past logs">‹</button>
         <input id="historyImportInput" type="file" accept=".csv,text/csv" hidden>
     </div>
     <button id="historyCompareToggle" class="history-compare-toggle" type="button">
@@ -38,7 +48,10 @@
 
 <div id="profileEditor">
     <div class="modal-content">
-        <h3>Settings</h3>
+        <div class="settings-desktop-header">
+            <h3>Settings</h3>
+            <button id="settingsCollapseBtn" class="panel-collapse-btn settings-collapse-btn" type="button" aria-label="Collapse settings">›</button>
+        </div>
         <div class="settings-tabs" role="tablist" aria-label="Settings sections">
             <span class="settings-tab-indicator" aria-hidden="true"></span>
             <button class="settings-tab is-active" type="button" id="profileTabBtn" data-panel="profilePanel" role="tab" aria-selected="true">Profile</button>
@@ -210,6 +223,7 @@
     let selectedHistoryIds = [];
     let historyCompareMode = false;
     let historySwipeStart = null;
+    let historyViewerEntryId = '';
 
     function getProfileInputs() {
         return Array.from(document.querySelectorAll('.prof-input'));
@@ -929,12 +943,81 @@
         });
     }
 
+    const desktopLayoutQuery = window.matchMedia('(min-width: 1100px)');
+    const desktopHistoryCollapsedKey = 'desktopHistoryCollapsed';
+    const desktopSettingsCollapsedKey = 'desktopSettingsCollapsed';
+    const desktopHistoryCollapseBtn = document.getElementById('historyCollapseBtn');
+    const desktopSettingsCollapseBtn = document.getElementById('settingsCollapseBtn');
+
+    function isDesktopLayout() {
+        return desktopLayoutQuery.matches;
+    }
+
+    function setDesktopHistoryCollapsed(isCollapsed) {
+        localStorage.setItem(desktopHistoryCollapsedKey, isCollapsed ? 'true' : 'false');
+        applyDesktopLayoutState();
+    }
+
+    function setDesktopSettingsCollapsed(isCollapsed) {
+        localStorage.setItem(desktopSettingsCollapsedKey, isCollapsed ? 'true' : 'false');
+        applyDesktopLayoutState();
+    }
+
+    function applyDesktopLayoutState() {
+        const isDesktop = isDesktopLayout();
+        const isHistoryCollapsed = localStorage.getItem(desktopHistoryCollapsedKey) === 'true';
+        const isSettingsCollapsed = localStorage.getItem(desktopSettingsCollapsedKey) === 'true';
+        const profileEditorEl = document.getElementById('profileEditor');
+        const historyPanelEl = document.getElementById('historyPanel');
+        const historyScrimEl = document.getElementById('historyScrim');
+
+        document.body.classList.toggle('desktop-layout', isDesktop);
+        document.body.classList.toggle('history-collapsed', isDesktop && isHistoryCollapsed);
+        document.body.classList.toggle('settings-collapsed', isDesktop && isSettingsCollapsed);
+
+        desktopHistoryCollapseBtn.textContent = isHistoryCollapsed ? '›' : '‹';
+        desktopHistoryCollapseBtn.setAttribute('aria-label', isHistoryCollapsed ? 'Expand past logs' : 'Collapse past logs');
+        desktopSettingsCollapseBtn.textContent = isSettingsCollapsed ? '‹' : '›';
+        desktopSettingsCollapseBtn.setAttribute('aria-label', isSettingsCollapsed ? 'Expand settings' : 'Collapse settings');
+
+        if (isDesktop) {
+            historyPanelEl.classList.remove('is-open');
+            historyPanelEl.setAttribute('aria-hidden', 'false');
+            historyScrimEl.hidden = true;
+            profileEditorEl.style.display = '';
+            requestAnimationFrame(() => syncSettingsIndicator());
+        } else {
+            historyPanelEl.setAttribute('aria-hidden', historyPanelEl.classList.contains('is-open') ? 'false' : 'true');
+        }
+    }
+
     document.getElementById('profileToggleBtn').addEventListener('click', () => {
+        if (isDesktopLayout()) {
+            setDesktopSettingsCollapsed(false);
+            return;
+        }
         document.getElementById('profileEditor').style.display = 'block';
         requestAnimationFrame(() => syncSettingsIndicator());
     });
 
+    desktopHistoryCollapseBtn.addEventListener('click', () => {
+        setDesktopHistoryCollapsed(!document.body.classList.contains('history-collapsed'));
+    });
+
+    desktopSettingsCollapseBtn.addEventListener('click', () => {
+        setDesktopSettingsCollapsed(!document.body.classList.contains('settings-collapsed'));
+    });
+
+    if (desktopLayoutQuery.addEventListener) {
+        desktopLayoutQuery.addEventListener('change', applyDesktopLayoutState);
+    } else {
+        desktopLayoutQuery.addListener(applyDesktopLayoutState);
+    }
+
     document.getElementById('profileEditor').addEventListener('click', (event) => {
+        if (isDesktopLayout()) {
+            return;
+        }
         if (event.target.id === 'profileEditor') {
             event.target.style.display = 'none';
         }
@@ -1026,6 +1109,10 @@
     const historyCompareToggle = document.getElementById('historyCompareToggle');
     const historyImportBtn = document.getElementById('historyImportBtn');
     const historyImportInput = document.getElementById('historyImportInput');
+    const historyViewerBanner = document.getElementById('historyViewerBanner');
+    const historyViewerTitle = document.getElementById('historyViewerTitle');
+    const historyViewerMeta = document.getElementById('historyViewerMeta');
+    const historyExitViewerBtn = document.getElementById('historyExitViewerBtn');
 
     if (window['chartjs-plugin-annotation']) {
         Chart.register(window['chartjs-plugin-annotation']);
@@ -1645,6 +1732,10 @@
         }
 
         showChartReadout(tempElement.index);
+        if (historyViewerEntryId) {
+            hidePointDeletePanel();
+            return;
+        }
         if (hasCapturedTempAtIndex(tempElement.index)) {
             showPointDeletePanel(tempElement.index);
         } else {
@@ -1805,6 +1896,10 @@
     function resetChartState() {
         hidePointDeletePanel();
         hideChartReadout();
+        roastChart.data.labels = labels;
+        roastChart.data.datasets[0].data = referenceProfile;
+        roastChart.data.datasets[1].data = temps;
+        roastChart.data.datasets[2].data = rors;
         rawTemps.length = 0;
         temps.length = 0;
         rors.length = 0;
@@ -1818,6 +1913,9 @@
     function resetUI(clearWeights) {
         clearInterval(timerInterval);
         timerInterval = null;
+        historyViewerEntryId = '';
+        document.body.classList.remove('history-viewing');
+        historyViewerBanner.hidden = true;
         isRoasting = false;
         latestTargetTime = 0;
         currentSeconds = 0;
@@ -1976,19 +2074,53 @@
 
     function createHistoryEntryFromCsv(text, fileName) {
         const metadata = {};
-        String(text).replace(/^\uFEFF/, '').split(/\r?\n/).some((line, index) => {
+        const importedLabels = [];
+        const importedReference = [];
+        const importedTemps = [];
+        const importedRawTemps = [];
+        const importedRors = [];
+        let dataHeader = null;
+
+        String(text).replace(/^\uFEFF/, '').split(/\r?\n/).forEach((line, index) => {
             if (line.trim() === '') {
-                return true;
+                return;
             }
+
+            const cells = parseCsvLine(line);
+            if (cells[0] === 'time_sec') {
+                dataHeader = cells;
+                return;
+            }
+
+            if (dataHeader) {
+                const row = Object.fromEntries(dataHeader.map((key, cellIndex) => [key, cells[cellIndex] || '']));
+                const second = parseInt(row.time_sec || '', 10);
+                if (!Number.isFinite(second)) {
+                    return;
+                }
+                const targetTemp = parseFloat(row.target_temp_c || '');
+                const actualTemp = parseFloat(row.actual_temp_c || '');
+                const rorValue = parseFloat(row.ror_c_per_min || '');
+                importedLabels.push(second);
+                importedReference.push(Number.isFinite(targetTemp) ? targetTemp : null);
+                importedTemps.push(Number.isFinite(actualTemp) ? actualTemp : null);
+                importedRawTemps.push(row.data_source !== 'interpolated' && Number.isFinite(actualTemp) ? actualTemp : null);
+                importedRors.push(Number.isFinite(rorValue) ? rorValue : null);
+                return;
+            }
+
             if (index === 0) {
-                return false;
+                return;
             }
-            const [key, value] = parseCsvLine(line);
+            const [key, value] = cells;
             if (key) {
                 metadata[key] = value || '';
             }
-            return false;
         });
+
+        const importedDuration = parseInt(metadata.roast_duration_sec || '0', 10)
+            || importedLabels[importedLabels.length - 1]
+            || 0;
 
         return {
             id: createHistoryId(),
@@ -1996,11 +2128,136 @@
             startedAt: metadata.roast_started_at || metadata.exported_at || '',
             stoppedAt: metadata.roast_stopped_at || '',
             beanName: metadata.bean_name || fileName.replace(/\.csv$/i, '') || 'Imported roast',
-            durationSec: parseInt(metadata.roast_duration_sec || '0', 10) || 0,
+            durationSec: importedDuration,
             weightLossPercent: metadata.weight_loss_percent !== undefined && metadata.weight_loss_percent !== ''
                 ? parseFloat(metadata.weight_loss_percent)
+                : null,
+            labels: importedLabels,
+            rawTemps: importedRawTemps,
+            temps: importedTemps,
+            rors: importedRors,
+            referenceProfile: importedReference,
+            crackSeconds: metadata.crack_time_sec !== undefined && metadata.crack_time_sec !== ''
+                ? parseInt(metadata.crack_time_sec, 10)
+                : null,
+            crackTemp: metadata.crack_temp_c !== undefined && metadata.crack_temp_c !== ''
+                ? parseFloat(metadata.crack_temp_c)
                 : null
         };
+    }
+
+    function normalizeHistoryNumberArray(values) {
+        return Array.isArray(values)
+            ? values.map((value) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : null;
+            })
+            : [];
+    }
+
+    function normalizeHistoryLabels(entry) {
+        if (Array.isArray(entry.labels) && entry.labels.length > 0) {
+            return entry.labels.map((value, index) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : index * dataInterval;
+            });
+        }
+
+        const durationSeconds = Math.max(defaultChartMaxSeconds, Number(entry.durationSec) || 0);
+        const fallbackLabels = [];
+        for (let t = 0; t <= durationSeconds; t += dataInterval) {
+            fallbackLabels.push(t);
+        }
+        return fallbackLabels;
+    }
+
+    function getLatestFiniteValue(values) {
+        for (let i = values.length - 1; i >= 0; i--) {
+            if (Number.isFinite(values[i])) {
+                return values[i];
+            }
+        }
+        return null;
+    }
+
+    function getHistoryEntryById(historyId) {
+        return roastHistory.find((entry) => entry.id === historyId) || null;
+    }
+
+    function showHistoryViewer(entry) {
+        if (!entry || roastPhase !== 0 || isRoasting) {
+            return;
+        }
+
+        const historyLabels = normalizeHistoryLabels(entry);
+        const historyTemps = normalizeHistoryNumberArray(entry.temps);
+        const historyRawTemps = normalizeHistoryNumberArray(entry.rawTemps);
+        const historyRors = normalizeHistoryNumberArray(entry.rors);
+        const historyReference = normalizeHistoryNumberArray(entry.referenceProfile);
+        const maxSecond = Math.max(defaultChartMaxSeconds, Number(entry.durationSec) || historyLabels[historyLabels.length - 1] || 0);
+        const latestTemp = getLatestFiniteValue(historyTemps);
+        const latestRor = getLatestFiniteValue(historyRors);
+
+        historyViewerEntryId = entry.id;
+        document.body.classList.add('history-viewing');
+        historyViewerBanner.hidden = false;
+        historyViewerTitle.textContent = entry.beanName || 'Untitled roast';
+        historyViewerMeta.textContent = `${formatHistoryDateTime(entry.startedAt || entry.createdAt)} · ${formatHistoryDuration(entry.durationSec)}`;
+
+        hidePointDeletePanel();
+        hideChartReadout();
+        labels.length = 0;
+        labels.push(...historyLabels);
+        rawTemps.length = 0;
+        rawTemps.push(...historyRawTemps);
+        temps.length = 0;
+        temps.push(...historyTemps);
+        rors.length = 0;
+        rors.push(...historyRors);
+
+        roastChart.data.labels = labels;
+        roastChart.data.datasets[0].data = historyReference;
+        roastChart.data.datasets[1].data = temps;
+        roastChart.data.datasets[2].data = rors;
+        roastChart.options.scales.x.max = computeChartMaxSeconds(maxSecond);
+        roastChart.options.plugins.annotation.annotations = {};
+        const crackSecond = Number(entry.crackSeconds);
+        const crackTemperature = Number(entry.crackTemp);
+        if (Number.isFinite(crackSecond)) {
+            roastChart.options.plugins.annotation.annotations.crackLine = {
+                type: 'line',
+                xMin: crackSecond,
+                xMax: crackSecond,
+                borderColor: '#e67e22',
+                borderWidth: 2,
+                borderDash: [4, 4],
+                label: { content: '1C', display: true, position: 'start' }
+            };
+        }
+        roastChart.update();
+
+        timerDisplay.innerText = formatTime(entry.durationSec || maxSecond);
+        tempDisplay.innerText = latestTemp !== null ? formatChartTemperature(latestTemp) : '---';
+        rorDisplay.innerText = latestRor !== null ? latestRor.toFixed(1) : '--.-';
+        crackInfo.hidden = !Number.isFinite(crackSecond);
+        if (Number.isFinite(crackSecond)) {
+            crackTimeBottom.innerText = formatTime(Math.max((entry.durationSec || 0) - crackSecond, 0));
+            crackTempRise.innerText = Number.isFinite(crackTemperature) && latestTemp !== null
+                ? `${latestTemp - crackTemperature > 0 ? '+' : ''}${(latestTemp - crackTemperature).toFixed(1)}`
+                : '--.-';
+        }
+        postRoastFields.hidden = true;
+    }
+
+    function exitHistoryViewer() {
+        if (!historyViewerEntryId) {
+            return;
+        }
+        historyViewerEntryId = '';
+        document.body.classList.remove('history-viewing');
+        historyViewerBanner.hidden = true;
+        resetUI(false);
+        renderRoastHistory();
     }
 
     function renderRoastHistory() {
@@ -2026,9 +2283,10 @@
         roastHistory.forEach((entry) => {
             const selectedIndex = selectedHistoryIds.indexOf(entry.id);
             const isSelected = selectedIndex !== -1;
+            const isViewing = entry.id === historyViewerEntryId;
             const markText = isSelected ? (historyCompareMode ? selectedIndex + 1 : '✓') : '';
             const button = document.createElement('button');
-            button.className = `history-card${isSelected ? ' is-selected' : ''}`;
+            button.className = `history-card${isSelected ? ' is-selected' : ''}${isViewing ? ' is-viewing' : ''}`;
             button.type = 'button';
             button.setAttribute('data-history-id', entry.id);
             button.innerHTML = `
@@ -2051,18 +2309,26 @@
             }
         } else {
             selectedHistoryIds = [historyId];
+            showHistoryViewer(getHistoryEntryById(historyId));
+            setHistoryPanelOpen(false);
         }
         renderRoastHistory();
     }
 
     function setHistoryPanelOpen(isOpen) {
+        if (isDesktopLayout()) {
+            historyPanel.classList.remove('is-open');
+            historyPanel.setAttribute('aria-hidden', 'false');
+            historyScrim.hidden = true;
+            return;
+        }
         historyPanel.classList.toggle('is-open', isOpen);
         historyPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
         historyScrim.hidden = !isOpen;
     }
 
     function canOpenHistoryPanel() {
-        return roastPhase === 0 && profileEditor.style.display !== 'block';
+        return !isDesktopLayout() && roastPhase === 0 && profileEditor.style.display !== 'block';
     }
 
     function shouldIgnoreHistorySwipeTarget(target) {
@@ -2201,6 +2467,9 @@
     }
 
     async function startRoast() {
+        if (historyViewerEntryId) {
+            exitHistoryViewer();
+        }
         hidePointDeletePanel();
         hideChartReadout();
         isRoasting = true;
@@ -2342,6 +2611,7 @@
         importHistoryCsv(historyImportInput.files?.[0]);
         historyImportInput.value = '';
     });
+    historyExitViewerBtn.addEventListener('click', exitHistoryViewer);
     historyScrim.addEventListener('click', () => setHistoryPanelOpen(false));
     cancelDeletePointBtn.addEventListener('click', hidePointDeletePanel);
     confirmDeletePointBtn.addEventListener('click', () => {
@@ -2393,6 +2663,7 @@
 
     loadRoastHistory();
     renderRoastHistory();
+    applyDesktopLayoutState();
     resetUI(false);
 </script>
 </body>

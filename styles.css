@@ -25,6 +25,10 @@ body {
     color: var(--text-primary);
 }
 
+.panel-collapse-btn {
+    display: none;
+}
+
 header {
     display: flex;
     justify-content: space-between;
@@ -51,6 +55,64 @@ h1 {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+
+.history-viewer-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid rgba(44, 189, 109, 0.18);
+    border-radius: 16px;
+    background: rgba(44, 189, 109, 0.07);
+}
+
+.history-viewer-banner[hidden] {
+    display: none;
+}
+
+.history-viewer-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-viewer-label {
+    color: #168349;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.history-viewer-title {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-viewer-meta {
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.history-viewer-exit {
+    flex: 0 0 auto;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 8px 11px;
 }
 
 .history-edge-handle {
@@ -194,6 +256,10 @@ h1 {
     background: rgba(44, 189, 109, 0.07);
 }
 
+.history-card.is-viewing {
+    border-color: rgba(44, 189, 109, 0.62);
+}
+
 .history-card-top {
     display: block;
     font-size: 0.68rem;
@@ -274,7 +340,7 @@ h1 {
     touch-action: pan-y;
 }
 
-.modal-content h3 {
+.settings-desktop-header h3 {
     margin: 0 0 8px 0;
     font-size: 1.1rem;
     font-weight: 600;
@@ -1105,4 +1171,208 @@ h1 {
     font-size: 0.75rem;
     color: var(--text-secondary);
     border-top: 1px dashed #edf2f7;
+}
+
+@media (min-width: 1100px) {
+    body {
+        --desktop-left-space: 312px;
+        --desktop-right-space: 374px;
+        padding: 22px var(--desktop-right-space) 112px var(--desktop-left-space);
+        transition: padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    body.history-collapsed {
+        --desktop-left-space: 72px;
+    }
+
+    body.settings-collapsed {
+        --desktop-right-space: 0px;
+    }
+
+    header,
+    #historyViewerBanner,
+    #dashboard,
+    #weightPanel,
+    #canvas-container,
+    #logToggle,
+    #log {
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    header {
+        margin-bottom: 18px;
+    }
+
+    #profileToggleBtn {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 8px 12px;
+        transform-origin: center;
+        transition: background 0.18s ease, border-color 0.18s ease, transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    body.settings-collapsed #profileToggleBtn {
+        border-color: rgba(44, 189, 109, 0.24);
+        background: rgba(44, 189, 109, 0.08);
+    }
+
+    .panel-collapse-btn {
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 999px;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.82);
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .history-edge-handle,
+    .history-scrim {
+        display: none !important;
+    }
+
+    .history-panel {
+        top: 16px;
+        bottom: 16px;
+        left: 16px;
+        z-index: 50;
+        width: 280px;
+        padding: 18px 12px;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        border-radius: 22px;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+        transform: none;
+        transition: width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
+    }
+
+    .history-panel.is-open {
+        transform: none;
+    }
+
+    .history-header {
+        min-height: 30px;
+    }
+
+    .history-collapse-btn {
+        margin-left: auto;
+    }
+
+    body.history-collapsed .history-panel {
+        width: 44px;
+        padding: 12px 7px;
+        overflow: hidden;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    body.history-collapsed .history-panel::after {
+        content: "Past Logs";
+        position: absolute;
+        top: 58px;
+        left: 50%;
+        color: var(--text-secondary);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        writing-mode: vertical-rl;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+
+    body.history-collapsed .history-header {
+        justify-content: center;
+        margin-bottom: 0;
+    }
+
+    body.history-collapsed .history-header h2,
+    body.history-collapsed .history-import-btn,
+    body.history-collapsed .history-compare-toggle,
+    body.history-collapsed .history-list {
+        display: none;
+    }
+
+    body.history-collapsed .history-collapse-btn {
+        margin: 0;
+    }
+
+    #profileEditor {
+        display: block !important;
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        bottom: 16px;
+        left: auto;
+        z-index: 50;
+        width: 342px;
+        height: auto;
+        background: transparent;
+        backdrop-filter: none;
+        pointer-events: none;
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        transform-origin: top right;
+        transition:
+            opacity 0.18s ease,
+            transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+            visibility 0.18s ease;
+    }
+
+    .modal-content {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        padding: 18px 16px;
+        border: 1px solid rgba(15, 23, 42, 0.06);
+        border-radius: 22px;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+        overflow-y: auto;
+        pointer-events: auto;
+        transition: padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease;
+    }
+
+    .settings-desktop-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .settings-desktop-header h3 {
+        margin: 0;
+    }
+
+    body.settings-collapsed #profileEditor {
+        opacity: 0;
+        pointer-events: none;
+        transform: translate3d(-220px, -8px, 0) scale(0.18);
+    }
+
+    body.settings-collapsed .modal-content {
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        pointer-events: none;
+    }
+
+    #canvas-container {
+        height: min(48vh, 520px);
+        min-height: 340px;
+    }
+
+    #actionUI {
+        left: calc(var(--desktop-left-space) + (100vw - var(--desktop-left-space) - var(--desktop-right-space)) / 2);
+        width: min(400px, calc(100vw - var(--desktop-left-space) - var(--desktop-right-space) - 32px));
+        transform: translateX(-50%);
+        transition: left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
 }
