@@ -2335,11 +2335,14 @@
         return Boolean(target.closest('input, textarea, select, button, #profileEditor, .history-panel'));
     }
 
+    const historySwipeEdgeWidth = 64;
+    const historySwipeOpenDistance = 54;
+
     function handleHistorySwipeStart(event) {
         if (!canOpenHistoryPanel() || historyPanel.classList.contains('is-open')) {
             return;
         }
-        if (event.clientX > 24 || shouldIgnoreHistorySwipeTarget(event.target)) {
+        if (event.clientX > historySwipeEdgeWidth || shouldIgnoreHistorySwipeTarget(event.target)) {
             return;
         }
         historySwipeStart = {
@@ -2357,7 +2360,7 @@
         const deltaY = event.clientY - historySwipeStart.y;
         historySwipeStart = null;
 
-        if (deltaX > 72 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
+        if (deltaX > historySwipeOpenDistance && Math.abs(deltaX) > Math.abs(deltaY) * 1.1) {
             loadRoastHistory();
             renderRoastHistory();
             setHistoryPanelOpen(true);

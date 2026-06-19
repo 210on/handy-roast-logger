@@ -9,6 +9,9 @@
     --accent-save: #34495e;
     --chart-temp: #e74c3c;
     --chart-ror: #3498db;
+    --selection-mark-size: 18px;
+    --selection-mark-border: 1.5px solid rgba(15, 23, 42, 0.14);
+    --selection-mark-font-size: 0.68rem;
 }
 
 * {
@@ -288,13 +291,14 @@ h1 {
     top: 12px;
     right: 10px;
     display: inline-grid;
-    width: 18px;
-    height: 18px;
+    width: var(--selection-mark-size);
+    height: var(--selection-mark-size);
     place-items: center;
-    border: 1.5px solid rgba(15, 23, 42, 0.14);
+    border: var(--selection-mark-border);
     border-radius: 50%;
     color: var(--text-secondary);
-    font-size: 0.68rem;
+    font-size: var(--selection-mark-font-size);
+    font-weight: 800;
     line-height: 1;
 }
 
@@ -502,16 +506,18 @@ h1 {
     position: absolute;
     top: 50%;
     right: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 999px;
+    display: inline-grid;
+    width: var(--selection-mark-size);
+    height: var(--selection-mark-size);
+    place-items: center;
+    border: var(--selection-mark-border);
+    border-color: var(--accent-green);
+    border-radius: 50%;
     color: #ffffff;
     background: var(--accent-green);
-    font-size: 0.72rem;
+    font-size: var(--selection-mark-font-size);
     font-weight: 800;
+    line-height: 1;
     transform: translateY(-50%);
 }
 
