@@ -1038,6 +1038,7 @@
     let currentSeconds = 0;
     let lastProcessedSlotIndex = -1;
     const dataInterval = 5;
+    const rorDisplayWindowSeconds = 30;
     let cueInterval = 10;
     const defaultChartMaxSeconds = 180;
     let latestTargetTime = 0;
@@ -1577,8 +1578,8 @@
             }
         }
 
-        const latestValidRoR = rors.slice().reverse().find((value) => value !== undefined && value !== null);
-        rorDisplay.innerText = latestValidRoR !== undefined ? latestValidRoR.toFixed(1) : '--.-';
+        const displayRoR = calculateDisplayRoR(rors);
+        rorDisplay.innerText = displayRoR !== null ? displayRoR.toFixed(1) : '--.-';
     }
 
     function rebuildInterpolatedTemps() {
@@ -2196,7 +2197,7 @@
         const historyReference = normalizeHistoryNumberArray(entry.referenceProfile);
         const maxSecond = Math.max(defaultChartMaxSeconds, Number(entry.durationSec) || historyLabels[historyLabels.length - 1] || 0);
         const latestTemp = getLatestFiniteValue(historyTemps);
-        const latestRor = getLatestFiniteValue(historyRors);
+        const latestRor = calculateDisplayRoR(historyRors);
 
         historyViewerEntryId = entry.id;
         document.body.classList.add('history-viewing');

@@ -29,6 +29,7 @@ function extractFunctionSource(name) {
 function createLogicContext() {
     const context = {
         dataInterval: 5,
+        rorDisplayWindowSeconds: 30,
         cueInterval: 10,
         rawTemps: [],
         temps: [],
@@ -179,7 +180,40 @@ test('calculateRoR starts after bottom temperature has a rising captured point',
     assert.equal(logic.rors[2], 0);
     assert.equal(logic.rors[3], 84);
     assert.equal(logic.rors[4], 96);
-    assert.equal(logic.rorDisplay.innerText, '96.0');
+    assert.equal(logic.rorDisplay.innerText, '60.0');
+});
+
+test('calculateDisplayRoR averages the trailing 30 seconds of per-slot RoR', () => {
+    const logic = createLogicContext();
+
+    // Integer readings every 10 sec, interpolated into 5 sec slots, give per-slot RoR in 6 °C/min steps.
+    const rors = [null, 0, 6, 6, 12, 12, 6, 6, 12, 12, null, null];
+    assert.equal(logic.calculateDisplayRoR(rors), 10);
+    assert.equal(logic.calculateDisplayRoR(rors, 10), 12);
+    assert.equal(logic.calculateDisplayRoR(rors, 60), 8);
+});
+
+test('calculateDisplayRoR skips gaps and returns null without RoR values', () => {
+    const logic = createLogicContext();
+
+    assert.equal(logic.calculateDisplayRoR([0, 6, null, 12]), 6);
+    assert.equal(logic.calculateDisplayRoR([null, null]), null);
+    assert.equal(logic.calculateDisplayRoR([]), null);
+    assert.equal(logic.calculateDisplayRoR(undefined), null);
+});
+
+test('calculateRoR shows a smoothed value for integer readings while keeping per-slot RoR', () => {
+    const logic = createLogicContext();
+    // Bottom at 90, then integer readings every 10 sec rising 1 or 2 degrees.
+    [100, 90, null, 91, null, 93, null, 94, null, 96, null, 97].forEach((temp, index) => {
+        logic.rawTemps[index] = temp;
+    });
+    logic.labels.push(...logic.rawTemps.map((_, index) => index * 5));
+
+    logic.rebuildInterpolatedTemps();
+
+    assert.deepEqual(toPlainObject(logic.rors.slice(1)), [0, 6, 6, 12, 12, 6, 6, 12, 12, 6, 6]);
+    assert.equal(logic.rorDisplay.innerText, '8.0');
 });
 
 test('calculateDataQuality summarizes captured, interpolated, missed, and rejected values', () => {
