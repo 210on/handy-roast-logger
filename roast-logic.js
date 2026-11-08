@@ -169,6 +169,30 @@ function roundToDataSlot(seconds) {
     return Math.max(0, Math.round(seconds / dataInterval) * dataInterval);
 }
 
+// Integer temperature readings make per-slot RoR jump in fixed steps (6 °C/min at a 10 sec cue),
+// so the dashboard shows a trailing moving average while the chart and CSV keep per-slot values.
+function calculateDisplayRoR(rorValues, windowSeconds = rorDisplayWindowSeconds) {
+    const values = Array.isArray(rorValues) ? rorValues : [];
+    let latestIndex = values.length - 1;
+    while (latestIndex >= 0 && !Number.isFinite(values[latestIndex])) {
+        latestIndex--;
+    }
+    if (latestIndex < 0) {
+        return null;
+    }
+
+    const windowSlots = Math.max(1, Math.round(windowSeconds / dataInterval));
+    let sum = 0;
+    let count = 0;
+    for (let i = latestIndex; i > latestIndex - windowSlots && i >= 0; i--) {
+        if (Number.isFinite(values[i])) {
+            sum += values[i];
+            count++;
+        }
+    }
+    return sum / count;
+}
+
 if (typeof window !== 'undefined') {
     Object.assign(window, {
         normalizeProfileInputs,
@@ -181,6 +205,7 @@ if (typeof window !== 'undefined') {
         normalizeCueInterval,
         normalizeNumericText,
         parseRecognizedTemperature,
-        roundToDataSlot
+        roundToDataSlot,
+        calculateDisplayRoR
     });
 }
